@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bezi @ Whole Foods</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f6f5f1; --card:#fff; --line:#e6e3dc; --line-soft:#f0ede7; --ink:#1b1b1a; --muted:#6d6a64; --faint:#a9a59d;
+  --head:#1b1b1a; --up:#2d7a4f; --up-bg:#e7f3eb; --down:#b8412f; --down-bg:#fbece8; --warn:#9a6207; --warn-bg:#fdf3dc;
+  --nyc:#2563eb; --nj:#16a34a; --nyct:#9333ea; --li:#d97706; --spend:#7c3aed;
+  color-scheme:light;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);
+     font-size:14px;line-height:1.5;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--nyc);outline-offset:2px}
+
+/* gate */
+#gate{position:fixed;inset:0;background:var(--head);display:flex;align-items:center;justify-content:center;z-index:100;padding:24px}
+#gate form{background:#fff;border-radius:12px;padding:32px;width:100%;max-width:340px}
+#gate h2{font-size:20px;margin-bottom:4px}
+#gate p{color:var(--muted);font-size:13px;margin-bottom:18px}
+#gate input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font:inherit;margin-bottom:10px}
+#gate button{width:100%;padding:10px;border:0;border-radius:8px;background:var(--head);color:#fff;font-weight:600;cursor:pointer}
+#gate .err{color:var(--down);font-size:12px;min-height:18px;margin:-4px 0 6px}
+body.locked #app{display:none}
+
+/* header */
+.header{background:var(--head);color:#fff;padding:28px 40px 26px}
+.header-in{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;gap:28px;flex-wrap:wrap}
+.header h1{font-size:24px;font-weight:700;letter-spacing:-.4px}
+.header .sub{font-size:12.5px;color:rgba(255,255,255,.55);margin-top:4px}
+.kpis{display:flex;gap:36px;flex-wrap:wrap}
+.kpi{min-width:92px}
+.kpi .v{font-size:26px;font-weight:600;letter-spacing:-.6px;line-height:1.1}
+.kpi .l{font-size:12px;color:rgba(255,255,255,.6);margin-top:3px}
+.kpi .s{font-size:11px;color:rgba(255,255,255,.4)}
+.kpi .v.up{color:#7fd6a2}.kpi .v.down{color:#f2a293}
+
+/* sections */
+.section{max-width:1400px;margin:36px auto;padding:0 32px}
+.section-head{display:flex;align-items:baseline;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.section-head h2{font-size:17px;font-weight:600;letter-spacing:-.2px}
+.section-head .num{color:var(--faint);font-weight:500;margin-right:6px}
+.section-head .note{font-size:12.5px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px}
+
+/* filters */
+.filters{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.fgroup{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.fgroup .fl{font-size:12px;color:var(--muted);margin-right:3px}
+.pill{padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:500;cursor:pointer;border:1.5px solid var(--line);
+      background:#fff;color:var(--muted);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.pill:hover{border-color:#bdb8ae;color:var(--ink)}
+.pill .dot{width:7px;height:7px;border-radius:50%}
+.pill[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.pill[aria-pressed="true"] .dot{background:#fff!important}
+.pill.spend[aria-pressed="true"]{background:var(--spend);border-color:var(--spend)}
+.fsep{width:1px;height:22px;background:var(--line)}
+.select{padding:5px 10px;border-radius:8px;border:1.5px solid var(--line);background:#fff;font:inherit;font-size:12.5px;color:var(--ink)}
+
+/* chart */
+.chart-card{padding:20px 22px 14px}
+.chart-wrap{position:relative;height:320px}
+.chart-foot{display:flex;gap:22px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);padding-top:12px;margin-top:10px;border-top:1px solid var(--line-soft)}
+.chart-foot b{color:var(--ink);font-weight:600}
+.empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;text-align:center}
+
+.empty[hidden]{display:none}
+
+/* generic table */
+.tscroll{overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+table{border-collapse:separate;border-spacing:0;width:100%}
+th,td{white-space:nowrap}
+thead th{position:sticky;top:0;z-index:2;background:#f3f1ec;font-size:12px;font-weight:600;color:var(--muted);
+         padding:9px 14px;border-bottom:1px solid var(--line);text-align:right}
+thead th:first-child{text-align:left}
+thead th .ds{display:block;font-weight:400;font-size:11px;color:var(--faint)}
+tbody td{padding:8px 14px;border-bottom:1px solid var(--line-soft);text-align:right;font-size:13px}
+tbody td:first-child{text-align:left}
+tbody tr:hover td{background:#faf9f6}
+.rank{color:var(--faint);font-size:11px;margin-right:7px;display:inline-block;min-width:20px}
+.tag{display:inline-block;font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.nyc{background:#e0eaff;color:#1d4ed8}.tag.nj{background:#dcf5e3;color:#15803d}
+.tag.nyct{background:#f1e6ff;color:#7e22ce}.tag.li{background:#fdf0d5;color:#a15c06}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;min-width:58px;text-align:center}
+.badge.up{background:var(--up-bg);color:var(--up)}.badge.down{background:var(--down-bg);color:var(--down)}
+.badge.flat{background:#f1efea;color:var(--muted)}
+.sortable{cursor:pointer;user-select:none}
+.sortable:hover{color:var(--ink)}
+.sortable .arr{font-size:10px;opacity:.35;margin-left:3px}
+.sortable.on{color:var(--ink)}.sortable.on .arr{opacity:1}
+tr.total td{background:#f7f5f0;font-weight:600;border-bottom:1px solid var(--line)}
+
+/* matrix tables (demo + velocity) */
+.matrix{max-height:620px}
+.matrix table{width:auto;min-width:100%}
+.matrix thead th{text-align:center;padding:8px 6px;min-width:92px}
+.matrix thead th:first-child{left:0;z-index:4;text-align:left;min-width:170px;padding-left:14px}
+.matrix tbody td{text-align:center;padding:4px 4px;border-right:1px solid var(--line-soft)}
+.matrix tbody td:first-child{position:sticky;left:0;z-index:1;background:#fff;text-align:left;padding:6px 14px;
+                            font-weight:500;border-right:1px solid var(--line);font-size:13px}
+.matrix tbody tr:hover td:first-child{background:#faf9f6}
+.matrix tr.total td{position:sticky;bottom:0;z-index:2;background:var(--head);color:#fff;border-bottom:0;border-right-color:#333}
+.matrix tr.total td:first-child{z-index:3;background:var(--head);color:#fff}
+.cell{border-radius:5px;padding:4px 5px;line-height:1.25;min-height:38px;display:flex;flex-direction:column;justify-content:center}
+.cell .a{font-size:13px;font-weight:600}
+.cell .b{font-size:10.5px;opacity:.8}
+.c-red{background:var(--down-bg);color:var(--down)}
+.c-yellow{background:var(--warn-bg);color:var(--warn)}
+.c-green{background:var(--up-bg);color:var(--up)}
+.c-none{color:#d4d0c8}
+.c-up .b{color:var(--up);opacity:1}.c-down .b{color:var(--down);opacity:1}
+.c-uptint{background:#f1f8f3}.c-downtint{background:#fcf3f1}
+.dd{display:inline-block;font-size:10px;font-weight:600;color:var(--spend);background:#f1ebfe;border-radius:3px;padding:0 4px;margin-left:3px}
+.tot .a{font-size:13px}.tot .b{opacity:.7}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-2px}
+.summary{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.summary b{color:var(--ink);font-size:15px;font-weight:600;margin-right:4px}
+.section-error{padding:18px;color:var(--down);font-size:13px}
+.footer{max-width:1400px;margin:10px auto 40px;padding:0 32px;font-size:11.5px;color:var(--faint)}
+
+@media (max-width:720px){
+  .header{padding:22px 18px}.section{padding:0 14px;margin:26px auto}
+  .fsep{display:none}.kpis{gap:18px 26px}.kpi .v{font-size:21px}.chart-wrap{height:260px}
+}
+</style>
+</head>
+<body class="locked">
+
+<div id="gate">
+  <form onsubmit="return tryUnlock(event)">
+    <h2>Bezi @ Whole Foods</h2>
+    <p>Enter the team password to view the dashboard.</p>
+    <input id="pw" type="password" autocomplete="current-password" aria-label="Password" autofocus>
+    <div class="err" id="pwErr" role="alert"></div>
+    <button type="submit">Open dashboard</button>
+  </form>
+</div>
+
+<div id="app">
+  <header class="header">
+    <div class="header-in">
+      <div>
+        <h1>Bezi @ Whole Foods</h1>
+        <div class="sub" id="subline"></div>
+      </div>
+      <div class="kpis" id="kpis"></div>
+    </div>
+  </header>
+
+  <section class="section" id="sec-chart">
+    <div class="section-head"><h2><span class="num">01</span>Weekly unit sales</h2><span class="note">Units per Mon–Sun week. Shaded bands are WFM promo windows.</span></div>
+    <div class="filters" id="chartFilters"></div>
+    <div class="card chart-card">
+      <div class="chart-wrap"><canvas id="trendChart" aria-label="Weekly unit sales chart"></canvas><div class="empty" id="chartEmpty" hidden></div></div>
+      <div class="chart-foot" id="chartFoot"></div>
+    </div>
+  </section>
+
+  <section class="section" id="sec-momentum">
+    <div class="section-head"><h2><span class="num">02</span>Store momentum</h2><span class="note">Click a column to sort. Trend compares last week to the prior 4-week average.</span></div>
+    <div class="filters" id="momentumFilters"></div>
+    <div class="tscroll" style="max-height:720px">
+      <table id="momentumTable"><thead id="mHead"></thead><tbody id="mBody"></tbody></table>
+    </div>
+  </section>
+
+  <section class="section" id="sec-demo">
+    <div class="section-head"><h2><span class="num">03</span>Demo tracker</h2><span class="note">Each cell: shelf units before demo / units sold, then spend and cost per unit sold.</span></div>
+    <div class="filters" id="demoFilters"></div>
+    <div class="summary" id="demoSummary"></div>
+    <div class="tscroll matrix" id="demoScroll"><table><thead id="dHead"></thead><tbody id="dBody"></tbody></table></div>
+    <div class="legend">
+      <span><i style="background:var(--down-bg);border:1px solid var(--down)"></i>10 or fewer on shelf</span>
+      <span><i style="background:var(--warn-bg);border:1px solid var(--warn)"></i>11–18 on shelf</span>
+      <span><i style="background:var(--up-bg);border:1px solid var(--up)"></i>19+ on shelf</span>
+      <span>With 2+ demos in a week, color uses the lowest shelf count; sold and spend are totals. Hover a cell for each demo.</span>
+    </div>
+  </section>
+
+  <section class="section" id="sec-velocity">
+    <div class="section-head"><h2><span class="num">04</span>L4W velocity tracker</h2><span class="note">Each cell: average units per week over the 4 weeks ending that week, change vs the prior week's 4-week average, and demo days in the window.</span></div>
+    <div class="filters" id="velFilters"></div>
+    <div class="tscroll matrix" id="velScroll"><table><thead id="vHead"></thead><tbody id="vBody"></tbody></table></div>
+    <div class="legend">
+      <span><i style="background:#f1f8f3;border:1px solid var(--up)"></i>Up 10%+ vs prior</span>
+      <span><i style="background:#fcf3f1;border:1px solid var(--down)"></i>Down 10%+ vs prior</span>
+      <span><span class="dd">2d</span> demo days in the 4-week window</span>
+    </div>
+  </section>
+
+  <div class="footer" id="footer"></div>
+</div>
+
+<script id="bezi-data" type="application/json">{"meta":{"built":"2026-10-05","data_through":"2026-10-04","weeks":["2025-11-03","2025-11-10","2025-11-17","2025-11-24","2025-12-01","2025-12-08","2025-12-15","2025-12-22","2025-12-29","2026-01-05","2026-01-12","2026-01-19","2026-01-26","2026-02-02","2026-02-09","2026-02-16","2026-02-23","2026-03-02","2026-03-09","2026-03-16","2026-03-23","2026-03-30","2026-04-06","2026-04-13","2026-04-20","2026-04-27","2026-05-04","2026-05-11","2026-05-18","2026-05-25","2026-06-01","2026-06-08","2026-06-15","2026-06-22","2026-06-29","2026-07-06","2026-07-13","2026-07-20","2026-07-27","2026-08-03","2026-08-10","2026-08-17","2026-08-24","2026-08-31","2026-09-07","2026-09-14","2026-09-21","2026-09-28"],"buckets":["tub_everything","tub_hotHoney","tub_plain","dip_everything","dip_hotHoney"],"launch":{"rev":21094.46,"units":3018,"from":"2025-09-01","to":"2025-11-02"},"sales_files":28,"demo_file":"10_5_Pull_BEZI_Demo_Completion_Form_2025_Responses_5.xlsx"},"groups":{"nyc":["Bowery","Brooklyn","Brooklyn Grand Street","Bryant Park","Chelsea","Columbus Circle","East 57th Street","Fort Greene","Harlem","Industry City","Manhattan West","NoMad","One Wall Street","Tribeca","Union Square","Upper East Side","Upper West Side","Williamsburg","Lenox Hill"],"nj":["Bridgewater","Clark","Closter","Edgewater","Hoboken","Jersey City","Marlboro","Metuchen","Middletown","Millburn Union","Montclair","Morristown","Newark","Paramus","Parsippany","Ridgewood","Rose City","Wayne","Weehawken","West Orange","Woodcliff Lake","Montgomery NJ","Eatontown"],"nyct":["Albany","Buffalo","Chappaqua","Danbury","Darien","Fairfield","Greenwich","Milford","Port Chester","Rochester","Stamford","Westport","White Plains","Yonkers"],"li":["Commack","Holbrook","Huntington Station","Jericho","Lake Grove","Manhasset","Massapequa","Westbury"]},"stores":["Albany","Bowery","Bridgewater","Brooklyn","Brooklyn Grand Street","Bryant Park","Buffalo","Chappaqua","Chelsea","Clark","Closter","Columbus Circle","Commack","Danbury","Darien","East 57th Street","Eatontown","Edgewater","Fairfield","Fort Greene","Greenwich","Harlem","Hoboken","Holbrook","Huntington Station","Industry City","Jericho","Jersey City","Lake Grove","Lenox Hill","Manhasset","Manhattan West","Marlboro","Massapequa","Metuchen","Middletown","Milford","Millburn Union","Montclair","Montgomery NJ","Morristown","Newark","NoMad","One Wall Street","Paramus","Parsippany","Port Chester","Ridgewood","Rochester","Rose City","Stamford","Tribeca","Union Square","Upper East Side","Upper West Side","Wayne","Weehawken","West Orange","Westbury","Westport","White Plains","Williamsburg","Woodcliff Lake","Yonkers"],"units":{"Albany":{"tub_everything":[0,2,2,2,2,3,0,2,2,0,1,0,0,0,0,1,1,2,1,0,1,4,1,3,2,2,0,0,0,1,0,0,4,1,3,2,1,4,1,4,5,0,3,0,3,2,1,1],"tub_hotHoney":[0,3,1,4,1,1,1,3,4,2,1,0,2,2,0,2,2,0,1,1,1,3,1,3,1,1,1,0,1,1,0,0,0,0,1,1,2,1,2,2,0,1,0,0,2,0,0,0]},"Bowery":{"tub_everything":[9,25,35,8,19,20,3,3,6,23,25,20,34,42,28,19,23,9,20,10,10,19,10,15,18,5,14,10,14,14,9,5,10,12,10,9,10,6,6,8,4,6,4,12,11,12,5,17],"tub_hotHoney":[7,15,19,10,19,13,6,2,7,19,13,29,33,31,30,18,20,6,15,12,14,20,16,14,27,10,13,10,10,8,13,13,9,16,9,6,14,6,12,8,7,4,4,10,8,14,9,18]},"Bridgewater":{"tub_everything":[0,0,0,2,1,2,1,0,1,1,0,1,2,1,1,1,0,0,0,0,0,0,0,3,0,0,1,0,2,0,0,0,0,1,1,1,0,1,0,0,1,0,0,1,1,1,1,1],"tub_hotHoney":[1,0,0,4,0,0,1,2,0,0,1,0,1,1,4,2,2,0,0,0,0,0,0,2,0,0,0,0,3,1,1,1,0,6,2,1,0,3,1,0,0,2,0,4,1,0,3,1]},"Brooklyn":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],"tub_everything":[33,14,28,6,28,6,19,6,11,7,8,15,15,38,7,11,9,10,9,18,15,11,14,18,11,14,9,5,14,14,18,14,9,12,2,12,7,8,9,8,9,6,3,5,7,6,6,5],"tub_hotHoney":[25,12,23,8,23,12,10,4,14,6,9,13,9,23,6,6,6,8,7,3,9,5,11,13,5,15,11,7,10,12,11,14,6,8,10,9,8,6,9,9,7,4,6,4,6,4,4,5]},"Brooklyn Grand Street":{"tub_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,6,3,1,0,4,7,0,2,2,3,3,3,3,2,6,6,4,0,3,3,3,1,4,3,6,1,1,0,1,1,3],"tub_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,5,3,5,2,4,6,6,0,0,3,7,4,6,4,2,4,5,6,2,7,1,1,2,3,2,3,1,4,2,4,0]},"Bryant Park":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2],"tub_everything":[3,1,0,0,2,0,3,1,1,2,5,7,1,8,4,1,19,1,11,0,0,0,6,2,3,0,2,2,2,2,1,2,2,4,2,2,0,0,5,2,1,2,0,7,1,2,2,5],"tub_hotHoney":[2,4,2,1,3,2,1,2,2,8,5,3,3,2,3,1,12,7,16,2,4,2,9,6,4,2,5,9,2,4,2,3,2,7,3,4,4,1,2,3,0,1,1,4,1,2,2,5]},"Buffalo":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],"tub_everything":[2,0,1,1,1,1,2,0,0,0,1,1,0,0,1,0,0,0,0,0,1,1,0,0,0,0,0,2,1,0,1,0,1,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0],"tub_hotHoney":[2,1,1,1,2,0,0,0,1,3,1,0,2,1,1,1,2,2,3,0,1,0,0,1,1,0,0,3,1,0,0,0,0,0,0,2,2,0,1,1,1,0,0,1,1,0,0,0]},"Chappaqua":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"tub_everything":[3,5,2,3,1,5,3,3,5,6,2,5,2,1,2,3,2,1,1,4,0,3,2,4,4,1,3,5,3,2,3,1,2,1,3,0,3,3,1,0,2,1,3,0,1,0,1,0],"tub_hotHoney":[2,2,4,4,0,2,2,1,0,4,0,6,0,3,1,1,1,2,2,3,2,2,4,3,1,1,1,1,2,1,1,2,3,5,0,1,1,0,2,0,4,2,0,1,0,0,1,2]},"Chelsea":{"tub_everything":[6,4,3,2,8,6,6,1,4,5,4,7,11,6,23,14,9,5,9,13,5,10,13,9,9,6,3,11,8,6,5,5,3,5,8,2,4,0,1,1,3,3,4,4,9,4,14,6],"tub_hotHoney":[9,5,6,7,6,11,3,5,7,6,8,13,6,8,17,8,11,11,11,8,10,10,25,10,11,8,11,14,17,8,3,6,8,7,5,11,4,14,8,7,5,9,7,6,9,7,15,6]},"Clark":{"tub_everything":[1,0,2,3,0,0,4,2,1,1,1,2,2,2,0,4,1,3,1,0,0,2,0,3,1,1,-1,4,3,2,2,0,1,3,3,3,1,1,2,5,2,2,0,2,1,5,0,0],"tub_hotHoney":[0,0,1,0,1,1,0,1,0,0,2,1,0,6,1,4,0,3,1,0,4,4,1,3,2,4,0,4,2,0,4,2,0,2,3,3,4,1,5,3,1,0,1,1,3,2,2,1]},"Closter":{"tub_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,2,1,0,1,0,1,0,1,2,1,2,0,1,1,1,0,0,0,0,0,0,2,1],"tub_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,3,4,1,0,0,0,1,3,2,2,2,0,1,0,0,0,0,2,0,1,0,0,0]},"Columbus Circle":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"tub_everything":[29,27,15,4,14,13,17,5,21,19,26,16,20,26,9,28,7,22,24,10,22,21,14,18,17,3,5,13,10,11,7,7,17,3,13,5,13,17,8,18,8,9,5,7,8,9,6,9],"tub_hotHoney":[34,24,18,6,17,12,9,4,13,6,17,13,21,18,7,25,6,20,21,9,17,22,12,18,14,12,9,18,9,31,14,8,16,13,15,12,14,25,17,16,1,5,7,4,6,13,4,9]},"Commack":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"tub_everything":[1,2,1,1,2,4,3,0,1,4,1,2,1,2,1,2,0,1,0,2,0,2,3,2,0,0,0,2,2,0,0,0,1,0,1,0,1,0,0,0,0,0,0,2,1,1,0,2],"tub_hotHoney":[1,2,0,0,0,0,2,1,1,1,0,2,1,4,3,3,0,2,0,0,0,0,1,1,1,1,0,3,1,0,1,0,0,1,3,1,1,1,0,0,0,0,1,0,2,0,1,0]},"Danbury":{"tub_everything":[3,2,3,0,0,0,1,2,2,0,1,3,1,2,0,1,0,0,1,1,1,2,2,3,6,1,2,1,1,3,0,1,0,2,1,0,1,0,1,0,1,3,1,0,1,2,0,1],"tub_hotHoney":[0,0,2,2,0,1,2,3,3,1,0,1,0,3,2,3,0,0,2,2,3,1,0,2,1,2,0,1,2,0,1,0,0,2,2,0,0,2,2,0,2,0,1,4,3,0,0,0]},"Darien":{"tub_everything":[15,8,3,2,1,4,2,2,2,1,2,1,4,5,0,2,0,2,3,0,2,2,3,5,4,1,0,2,1,1,2,1,1,0,2,1,1,1,0,0,0,1,1,2,1,0,0,1],"tub_hotHoney":[2,5,2,4,2,2,3,0,0,0,1,1,0,1,2,1,1,2,0,2,0,2,3,1,4,3,0,3,0,0,0,0,0,2,1,2,0,2,1,2,1,2,2,1,0,0,0,0]},"East 57th Street":{"tub_everything":[5,5,8,5,7,3,5,2,3,3,2,5,11,15,2,1,5,2,3,2,3,1,4,5,2,1,2,3,4,2,3,1,2,8,5,6,9,3,6,6,5,7,6,5,3,3,1,1],"tub_hotHoney":[6,5,6,4,4,4,3,2,6,5,4,8,5,12,6,3,3,8,5,3,1,2,7,3,2,1,5,6,5,6,2,1,3,6,8,4,6,10,11,6,6,5,4,3,4,5,2,4]},"Eatontown":{"tub_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,1,0,0,0,0],"tub_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0]},"Edgewater":{"tub_everything":[2,0,1,3,0,1,2,3,4,0,1,4,2,0,3,1,3,4,1,3,2,2,3,2,4,4,1,5,2,5,2,2,0,1,1,3,1,2,0,0,3,1,0,1,2,1,1,2],"tub_hotHoney":[1,2,1,2,0,0,5,0,1,1,1,2,1,1,0,3,1,1,2,1,0,0,4,3,5,6,1,2,7,1,3,0,1,2,3,1,0,1,2,2,1,1,1,2,2,3,0,1]},"Fairfield":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],"tub_everything":[4,0,3,4,19,9,1,5,3,3,0,2,2,6,0,0,2,1,1,2,4,2,2,1,0,3,1,3,3,1,1,0,1,1,2,1,2,2,1,0,0,0,0,1,1,1,0,0],"tub_hotHoney":[5,1,1,1,9,5,2,0,2,3,1,0,1,1,1,1,0,2,1,0,2,4,4,1,1,1,2,1,6,2,1,1,1,2,2,3,2,3,1,0,1,0,3,2,0,4,2,1]},"Fort Greene":{"tub_everything":[20,9,16,6,15,17,8,6,7,15,4,8,10,8,8,6,9,5,8,6,5,7,12,17,3,7,4,9,8,8,6,7,3,11,10,7,4,6,3,2,5,4,12,9,8,12,12,2],"tub_hotHoney":[14,2,4,5,9,13,4,2,6,5,6,8,6,7,3,5,10,6,1,3,3,6,6,15,3,5,4,7,8,9,9,4,6,11,3,6,9,8,2,11,4,8,8,7,9,6,5,7]},"Greenwich":{"tub_everything":[22,38,11,4,15,1,16,0,3,1,3,14,18,9,12,13,3,8,12,2,6,2,10,5,0,4,1,3,3,2,2,6,1,4,1,0,5,-1,10,2,2,1,1,5,5,2,0,3],"tub_hotHoney":[9,29,7,4,8,3,10,2,2,3,5,12,8,4,8,4,2,10,10,2,6,0,5,7,0,3,2,1,4,4,5,6,2,6,1,3,4,2,7,2,1,3,1,6,1,0,2,2]},"Harlem":{"tub_everything":[13,20,12,2,7,14,2,1,1,4,8,2,7,5,2,9,3,2,13,8,7,2,9,4,7,1,1,5,2,5,8,1,7,3,4,6,5,6,9,2,18,1,2,1,10,2,4,3],"tub_hotHoney":[19,15,10,4,8,6,5,2,7,5,7,4,6,12,3,3,3,4,8,3,10,2,6,5,3,5,3,2,3,0,11,2,5,7,7,13,11,7,14,4,13,2,5,1,0,1,1,2],"tub_plain":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0]},"Hoboken":{"tub_everything":[0,0,0,0,0,0,0,0,4,4,3,2,4,3,3,2,6,2,1,3,3,2,2,3,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tub_hotHoney":[0,0,0,0,0,0,0,0,1,2,2,2,6,9,7,0,0,3,2,7,2,0,3,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Holbrook":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"tub_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,1,0,0,0,1,0,2,0,2,0,1,0,0,0,0,2,1,0,0,0,0,0,0,0,0,3,0,0,0],"tub_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,2,0,0,0,1,1,3,1,0,0,1,1,0,0,0,0,0,1,0,0,0,0,3,0,0,0]},"Huntington Station":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"tub_everything":[0,0,1,1,0,0,1,0,0,0,0,0,2,3,0,0,0,0,0,0,1,4,1,2,0,2,2,3,1,0,1,0,1,1,0,0,1,2,1,1,0,1,0,0,5,0,0,1],"tub_hotHoney":[0,1,0,1,1,1,0,0,0,0,1,0,1,4,0,0,0,0,2,1,1,0,0,0,1,1,2,2,1,2,0,0,0,0,1,1,0,2,0,0,0,0,0,0,4,0,0,1]},"Industry City":{"tub_everything":[6,7,7,3,11,6,5,4,8,12,6,10,8,11,11,4,7,12,7,10,1,9,13,16,7,3,5,11,13,7,1,6,1,4,9,9,3,3,7,6,4,3,2,7,4,3,3,3],"tub_hotHoney":[2,0,2,2,4,3,2,2,5,4,4,4,5,6,11,3,2,5,6,7,6,5,9,8,3,1,4,4,10,2,8,6,3,10,13,1,9,4,1,6,6,8,1,9,7,5,5,3]},"Jericho":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"tub_everything":[1,2,2,0,1,2,1,3,2,3,1,4,3,2,0,3,3,2,0,1,1,1,1,4,1,0,4,1,1,1,0,0,0,2,0,1,1,0,0,0,0,1,0,4,0,0,1,10],"tub_hotHoney":[1,1,3,5,3,5,1,0,2,0,2,1,1,0,2,2,2,1,1,1,1,0,3,3,1,1,1,0,2,1,1,2,0,2,0,0,0,0,0,0,0,0,2,2,0,0,2,5]},"Jersey City":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"tub_everything":[57,24,28,8,22,12,7,5,14,15,8,24,11,37,26,10,19,7,15,7,15,22,9,6,17,6,3,7,3,7,13,4,4,9,6,18,16,24,10,25,10,8,12,20,14,16,17,5],"tub_hotHoney":[30,20,14,8,23,11,6,4,10,16,4,29,9,27,22,20,18,7,18,10,20,20,9,14,19,4,5,7,6,9,14,6,2,7,9,19,19,23,6,12,10,12,10,24,10,14,21,13]},"Lake Grove":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"tub_everything":[2,0,0,2,3,1,3,2,1,2,0,2,1,1,1,2,3,3,3,1,2,2,1,1,2,2,1,2,3,4,0,0,1,2,0,0,2,0,0,0,0,2,1,2,0,2,2,1],"tub_hotHoney":[2,1,0,1,3,1,1,0,0,2,2,1,4,1,0,2,3,1,1,0,2,1,1,1,1,1,2,1,3,0,3,1,1,1,3,1,1,1,0,0,0,3,0,2,0,0,1,1]},"Lenox Hill":{"tub_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Manhasset":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"tub_everything":[1,5,7,3,3,1,5,4,2,4,1,5,2,0,1,2,1,2,2,0,1,1,1,6,2,0,1,6,1,4,1,3,1,6,3,1,4,1,1,1,2,1,1,0,1,1,1,8],"tub_hotHoney":[0,2,1,4,2,0,3,2,4,3,3,2,2,3,3,2,3,3,3,2,1,2,5,2,3,1,0,6,0,1,5,2,2,2,2,0,0,1,2,3,1,0,1,2,3,2,2,7]},"Manhattan West":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"tub_everything":[27,8,7,3,3,2,2,1,4,5,2,6,5,5,2,6,3,5,11,7,8,11,8,8,8,4,11,7,3,6,4,6,2,1,8,7,2,2,7,5,5,1,2,6,1,4,3,3],"tub_hotHoney":[11,7,6,3,3,6,4,3,3,3,7,2,5,6,7,7,5,4,9,3,9,5,5,6,9,9,8,4,3,2,5,2,7,8,9,7,4,2,2,5,4,4,1,3,2,5,2,4]},"Marlboro":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"tub_everything":[1,1,6,2,2,4,0,1,0,1,2,1,1,1,0,1,0,3,0,4,1,3,3,1,5,2,1,3,1,4,0,0,1,1,0,2,1,2,3,2,0,2,4,0,0,1,0,0],"tub_hotHoney":[3,0,0,0,0,0,0,2,1,1,0,1,0,3,1,4,2,3,2,3,1,0,3,2,2,0,2,1,2,2,0,1,1,1,1,5,0,2,1,0,3,1,2,2,1,2,1,0]},"Massapequa":{"tub_everything":[3,1,1,2,1,1,1,1,0,1,2,3,2,2,0,0,0,1,1,1,2,1,2,2,1,1,3,2,2,0,0,0,0,0,2,0,0,0,1,1,0,2,0,0,5,0,1,7],"tub_hotHoney":[0,2,0,2,3,2,0,3,0,1,0,2,2,1,0,1,0,2,1,0,3,1,1,0,1,1,2,1,2,0,0,0,0,0,1,2,0,1,1,0,1,0,1,0,3,0,0,7]},"Metuchen":{"tub_everything":[1,1,1,1,2,0,1,0,4,2,1,0,2,4,0,3,1,1,0,1,2,0,3,4,0,4,0,1,1,0,2,0,1,1,1,0,1,2,0,0,2,4,0,1,0,0,1,0],"tub_hotHoney":[1,0,0,2,0,0,3,0,2,0,1,0,1,2,0,2,0,1,2,2,3,2,2,2,0,1,0,1,1,1,0,0,0,2,1,5,1,2,1,0,2,1,1,0,3,1,1,1]},"Middletown":{"tub_everything":[0,2,1,4,1,2,3,3,0,1,1,0,1,1,1,0,0,2,4,3,1,0,1,0,0,0,1,0,1,0,1,0,3,2,3,1,0,0,0,0,3,0,0,0,0,0,0,1],"tub_hotHoney":[1,2,2,2,0,1,2,2,1,0,2,1,0,0,1,1,0,1,0,1,1,2,1,2,1,1,0,2,0,5,0,1,0,1,5,2,0,1,1,0,2,0,0,0,0,0,0,1]},"Milford":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"tub_everything":[4,2,5,0,2,3,0,4,1,1,1,4,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tub_hotHoney":[1,2,1,0,1,1,0,0,1,4,0,3,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Millburn Union":{"tub_everything":[2,1,0,0,1,2,5,1,3,0,0,3,1,6,0,3,4,3,2,2,3,3,5,4,1,4,0,1,3,3,2,3,0,0,3,0,2,6,1,0,6,2,3,0,2,3,2,5],"tub_hotHoney":[0,0,2,3,1,2,2,3,2,2,3,3,4,1,3,4,3,4,4,3,3,2,4,2,3,3,3,3,3,1,5,0,0,3,1,0,1,0,4,5,5,3,3,1,0,4,2,1]},"Montclair":{"tub_everything":[1,14,0,1,0,2,0,1,2,1,0,2,0,5,3,4,0,0,1,0,1,0,2,4,1,0,0,9,8,8,1,1,12,7,3,4,0,0,10,5,6,12,4,0,2,3,3,1],"tub_hotHoney":[1,5,3,2,5,0,1,0,2,1,5,2,10,3,4,3,3,2,7,1,4,5,4,4,2,2,1,2,11,7,0,1,15,4,2,6,0,3,5,4,6,9,2,2,1,1,0,0]},"Montgomery NJ":{"tub_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,2,1,1,1,0,0],"tub_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,0,1,0,0,0]},"Morristown":{"tub_everything":[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"tub_hotHoney":[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"Newark":{"tub_everything":[1,1,3,0,0,0,0,0,6,1,0,0,3,0,0,1,0,1,4,2,0,5,6,1,4,2,2,5,2,1,1,1,0,3,0,2,0,0,0,0,1,0,1,0,2,1,0,0],"tub_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,1,4,6,3,0,0,0,0,3,0,1,4,0,1,1,0,2,3,0,0,1,0,4,1,2,0,4,0,0,1,0,1,0,1,0,0,1]},"NoMad":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5],"tub_everything":[4,4,8,6,4,6,7,2,10,5,5,2,6,10,9,7,3,5,4,8,2,7,10,6,2,3,3,7,9,4,3,6,1,2,3,7,4,4,2,4,7,4,7,1,3,2,1,5],"tub_hotHoney":[4,1,8,5,8,10,4,3,10,5,9,8,12,14,14,14,7,5,2,8,9,9,11,10,8,5,8,7,11,7,3,5,4,6,6,10,9,3,8,7,4,1,10,5,6,3,3,5]},"One Wall Street":{"tub_everything":[20,20,12,12,19,13,9,2,7,15,6,16,11,4,5,7,5,9,9,9,6,5,7,6,9,4,3,4,6,1,5,8,1,5,6,5,6,3,3,4,4,4,3,5,3,7,6,7],"tub_hotHoney":[13,13,15,5,14,12,8,4,10,3,9,11,14,9,3,6,7,9,5,8,4,3,11,9,8,4,6,4,6,5,7,4,5,4,3,3,4,7,4,4,8,4,3,2,9,4,10,2]},"Paramus":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"tub_everything":[1,0,2,4,1,2,1,1,5,1,1,0,3,7,1,2,1,2,3,1,3,1,1,6,5,2,2,2,2,9,3,1,8,15,4,2,9,9,1,1,10,12,3,0,-1,2,0,4],"tub_hotHoney":[0,1,1,1,1,2,2,2,2,5,1,2,1,5,2,-1,3,0,0,0,1,3,4,3,1,2,2,2,4,8,3,0,11,8,2,2,6,5,2,3,8,5,2,2,-1,4,1,2]},"Parsippany":{"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"tub_everything":[0,0,1,2,0,1,0,0,1,0,0,1,1,1,2,3,2,0,1,0,0,1,1,3,0,1,2,0,2,1,0,0,0,2,2,2,2,0,0,0,0,0,0,0,0,2,0,1],"tub_hotHoney":[1,0,2,0,0,1,0,0,0,1,0,1,0,1,0,0,2,0,1,2,0,0,0,1,0,0,3,0,2,3,0,2,0,3,3,4,2,3,0,4,5,3,0,5,0,4,1,2]},"Port Chester":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],"tub_everything":[0,25,9,1,1,2,1,1,0,4,2,1,2,8,1,3,1,2,1,7,0,4,2,4,6,1,2,2,4,1,1,1,1,2,2,3,3,2,0,0,0,0,0,2,2,0,0,0],"tub_hotHoney":[1,13,5,1,2,3,0,2,1,4,0,2,0,3,0,0,0,0,3,3,1,0,1,2,3,3,4,1,2,0,1,1,1,4,0,4,1,1,2,0,0,1,0,1,2,2,0,2]},"Ridgewood":{"tub_everything":[0,2,0,2,0,0,2,0,0,2,1,0,0,1,0,1,0,0,0,0,1,1,1,1,0,0,0,0,1,1,0,1,15,1,1,3,1,0,0,0,1,0,1,0,0,0,0,1],"tub_hotHoney":[0,2,0,2,2,0,1,1,3,1,2,4,1,2,2,2,3,0,1,1,0,2,3,1,3,1,0,6,0,1,1,1,18,-1,2,1,2,1,4,3,1,3,3,1,1,0,1,1]},"Rochester":{"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"tub_everything":[2,0,2,2,0,0,0,0,0,1,0,2,0,0,1,0,0,1,1,0,1,0,0,0,0,4,2,0,0,2,0,0,1,1,2,0,0,0,0,2,0,0,0,0,1,1,1,0],"tub_hotHoney":[2,1,4,1,6,4,0,1,0,1,0,2,2,4,0,1,2,0,1,1,1,0,2,2,2,0,1,1,2,1,1,2,4,0,3,0,1,1,0,1,0,3,3,1,1,0,0,1]},"Rose City":{"tub_everything":[1,1,2,0,0,3,2,1,5,1,3,1,6,2,0,0,1,0,1,2,0,0,1,1,2,0,0,4,3,1,1,1,1,1,2,0,3,0,1,0,1,1,1,0,1,0,3,2],"tub_hotHoney":[1,2,2,3,1,3,4,0,6,1,1,2,6,5,2,1,3,3,1,3,3,3,2,0,2,2,3,2,2,3,0,3,1,1,2,2,0,2,2,1,1,2,1,0,0,0,1,2]},"Stamford":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],"tub_everything":[5,3,28,3,1,1,4,0,2,4,1,6,0,0,2,3,1,0,1,1,2,2,0,1,0,2,1,1,1,1,1,2,5,3,5,2,1,0,0,0,0,0,0,1,2,3,1,0],"tub_hotHoney":[1,0,12,2,2,1,0,0,0,0,0,1,1,2,4,2,3,0,1,2,2,2,2,1,1,2,2,1,2,1,0,2,1,3,7,5,2,2,1,0,1,2,3,4,2,1,0,0]},"Tribeca":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,6],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,8],"tub_everything":[45,36,19,12,17,9,21,3,35,9,19,20,15,22,25,17,17,10,4,10,11,9,9,21,16,4,4,13,8,41,11,7,5,8,5,9,3,8,0,4,5,3,3,7,5,10,4,10],"tub_hotHoney":[32,20,21,7,10,8,14,1,20,9,12,12,18,25,19,15,17,9,11,10,19,8,10,24,15,19,7,16,10,40,10,9,11,6,5,13,7,8,11,5,9,9,8,4,3,13,12,8]},"Union Square":{"tub_everything":[10,6,7,1,3,3,4,5,6,8,4,7,15,20,5,7,10,8,16,8,10,9,11,15,12,7,5,9,9,8,3,7,8,10,6,5,7,5,2,2,5,17,17,4,2,0,7,1],"tub_hotHoney":[6,6,8,2,6,7,6,3,8,6,4,11,11,8,6,10,3,13,8,6,8,10,10,9,7,2,10,9,8,6,3,7,0,4,10,7,3,8,2,7,6,12,10,3,3,1,6,2]},"Upper East Side":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],"tub_everything":[5,7,10,2,6,4,8,7,11,6,5,4,9,1,1,5,14,4,2,6,7,3,5,10,6,3,5,8,3,9,0,4,1,6,7,6,3,0,1,2,0,0,2,2,2,0,5,0],"tub_hotHoney":[9,12,11,5,4,8,2,4,14,11,8,5,11,3,7,2,7,4,8,7,8,3,5,14,7,2,3,6,4,1,5,2,5,4,2,7,3,6,3,8,4,7,4,3,3,2,5,1]},"Upper West Side":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],"tub_everything":[18,5,10,7,5,6,5,4,3,5,10,10,6,14,4,5,3,2,5,10,21,1,14,8,5,9,4,9,12,1,3,3,5,8,8,6,2,4,1,19,1,3,24,4,6,1,5,4],"tub_hotHoney":[9,3,6,2,6,8,2,1,8,4,3,7,6,13,9,10,7,7,9,7,12,14,14,10,9,7,5,9,10,8,6,5,3,4,7,8,6,5,6,11,3,6,26,1,8,6,10,4]},"Wayne":{"tub_everything":[1,0,0,2,1,1,0,3,0,0,0,1,1,2,0,0,0,3,2,1,0,1,0,2,0,1,0,0,2,0,2,2,0,2,0,0,0,0,0,0,1,1,1,1,0,1,0,0],"tub_hotHoney":[0,2,3,0,1,0,0,1,1,3,0,1,0,1,1,1,0,2,1,1,0,1,2,1,3,1,0,3,2,0,1,2,2,1,1,1,1,0,0,0,0,1,2,1,2,1,0,0]},"Weehawken":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],"tub_everything":[0,8,2,0,4,1,5,4,10,3,6,9,10,4,20,0,16,1,4,9,7,4,6,7,7,4,1,6,9,5,3,2,3,5,5,5,4,2,2,0,0,0,1,1,0,0,0,0],"tub_hotHoney":[3,9,2,2,6,4,1,4,6,3,6,3,9,0,12,0,10,1,3,3,6,0,5,3,6,4,1,5,3,3,0,1,1,1,5,1,3,1,1,3,0,4,4,1,0,0,0,0]},"West Orange":{"tub_everything":[1,0,0,1,0,0,0,0,1,0,3,1,3,3,0,1,0,2,1,3,1,2,4,6,3,1,1,3,6,1,1,1,0,0,4,6,5,0,5,1,9,9,0,1,2,0,0,1],"tub_hotHoney":[1,1,0,0,0,0,0,0,0,0,1,1,2,1,0,0,1,2,0,0,0,1,2,2,1,1,1,0,5,1,2,1,2,2,1,9,4,1,11,0,6,7,2,3,3,1,2,0]},"Westbury":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5],"tub_everything":[8,4,2,6,1,3,4,3,6,4,9,7,6,5,4,7,4,5,3,1,5,5,8,9,7,1,2,5,7,6,3,4,0,5,8,1,4,2,0,0,0,3,1,0,0,11,1,8],"tub_hotHoney":[5,5,2,2,3,5,3,1,4,7,4,5,9,4,3,8,6,1,4,4,3,5,9,3,4,0,2,3,2,2,4,5,2,8,3,2,2,0,4,4,1,1,0,1,1,7,1,8]},"Westport":{"tub_everything":[0,4,4,3,2,0,2,1,4,0,0,1,5,2,1,1,0,1,1,1,3,0,1,1,0,3,1,0,2,0,1,1,1,0,0,1,2,1,1,0,1,0,1,0,0,2,0,1],"tub_hotHoney":[0,1,2,2,1,1,1,4,3,2,1,2,1,2,1,5,0,2,1,1,2,3,1,0,1,2,4,0,2,2,1,3,0,2,3,0,0,1,1,1,2,1,2,0,2,1,2,3]},"White Plains":{"tub_everything":[3,9,8,0,0,2,2,0,0,0,3,0,2,1,1,0,5,2,4,1,1,1,2,4,1,1,2,4,7,2,2,1,2,4,4,0,1,1,1,2,0,0,0,1,0,1,0,0],"tub_hotHoney":[0,8,7,4,1,1,2,4,6,2,4,5,3,5,1,6,3,5,2,4,0,2,2,3,1,3,4,5,5,1,0,1,3,1,1,4,0,0,2,1,2,1,2,2,1,1,0,0]},"Williamsburg":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],"dip_hotHoney":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],"tub_everything":[32,37,28,41,34,18,25,12,22,33,21,32,22,43,31,25,35,27,20,31,28,25,26,24,41,18,12,39,19,19,18,24,11,17,8,26,20,17,11,20,8,12,32,15,6,18,17,16],"tub_hotHoney":[30,21,21,27,20,18,19,11,16,35,27,29,18,56,35,42,31,16,21,43,21,13,21,20,35,22,18,28,28,13,21,15,19,14,8,10,4,20,10,20,12,9,24,20,9,22,13,15]},"Woodcliff Lake":{"dip_everything":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,3],"tub_everything":[1,2,1,1,0,2,2,-1,0,1,1,0,0,0,0,0,1,3,1,1,1,0,1,3,0,1,1,2,2,0,2,2,0,0,6,1,0,0,0,0,0,0,0,1,1,1,1,1],"tub_hotHoney":[0,3,3,2,2,1,3,1,2,0,0,3,1,2,1,0,1,2,0,1,4,1,0,2,1,3,0,2,3,2,0,1,3,0,6,2,2,2,2,1,0,0,0,2,1,0,2,0]},"Yonkers":{"tub_everything":[0,2,6,1,4,1,0,1,0,3,2,1,2,2,3,1,3,1,1,0,0,3,2,2,1,1,0,1,4,3,1,1,0,2,1,1,1,1,1,0,0,0,0,0,0,0,0,1],"tub_hotHoney":[2,2,4,2,2,2,0,0,2,3,3,0,1,2,1,3,0,1,4,1,1,1,1,2,2,1,0,0,3,3,2,0,1,1,1,2,2,1,4,3,0,4,2,3,1,3,1,1]}},"rev":{"Albany":{"tub_everything":[0.0,13.98,13.48,12.98,12.98,19.47,0.0,12.98,12.98,0.0,6.49,0.0,0.0,0.0,0.0,6.49,6.49,12.98,6.49,0.0,6.49,25.96,5.0,16.09,12.98,12.98,0.0,0.0,0.0,4.99,0.0,0.0,25.96,4.87,14.61,11.36,6.49,25.96,6.49,25.96,32.45,0.0,19.47,0.0,19.47,12.98,6.49,6.49],"tub_hotHoney":[0.0,20.97,6.49,25.96,6.49,6.49,6.49,19.47,25.96,12.98,6.49,0.0,10.53,9.98,0.0,12.98,12.98,0.0,6.49,6.49,6.49,19.47,4.99,15.53,6.49,6.49,6.49,0.0,4.99,6.49,0.0,0.0,0.0,0.0,4.87,4.87,12.98,6.49,12.98,12.98,0.0,6.49,0.0,0.0,12.98,0.0,0.0,0.0]},"Bowery":{"tub_everything":[62.91,174.75,238.15,51.92,123.31,129.8,19.47,19.47,38.94,149.27,162.25,129.8,182.11,216.73,170.82,123.31,149.27,58.41,129.8,64.9,64.9,123.31,51.97,76.56,113.83,32.45,90.86,54.0,71.51,85.41,58.41,32.45,64.9,64.43,50.86,51.93,64.9,38.94,38.94,51.92,25.96,38.94,25.96,77.88,71.39,77.88,32.45,110.33],"tub_hotHoney":[48.93,104.85,128.31,64.9,123.31,84.37,38.94,12.98,45.43,123.31,84.37,188.21,174.67,157.99,186.4,116.82,129.8,38.94,97.35,77.88,90.86,129.8,88.09,72.7,170.75,64.9,84.37,52.5,51.0,47.42,84.37,84.37,58.41,86.61,46.53,32.46,90.86,38.94,77.88,51.92,45.43,25.96,25.96,64.9,51.92,90.86,58.41,116.82]},"Bridgewater":{"tub_everything":[0.0,0.0,0.0,12.98,6.49,12.98,6.49,0.0,6.49,6.49,0.0,6.49,9.98,4.99,6.49,6.49,0.0,0.0,0.0,0.0,0.0,0.0,0.0,14.98,0.0,0.0,6.49,0.0,9.98,0.0,0.0,0.0,0.0,4.87,4.87,6.49,0.0,6.49,0.0,0.0,6.49,0.0,0.0,6.49,6.49,6.49,6.49,6.49],"tub_hotHoney":[6.99,0.0,0.0,25.96,0.0,0.0,6.49,12.98,0.0,0.0,6.49,0.0,6.49,4.99,22.96,12.98,12.98,0.0,0.0,0.0,0.0,0.0,0.0,9.98,0.0,0.0,0.0,0.0,14.97,4.99,6.49,6.49,0.0,30.84,9.74,6.49,0.0,19.47,6.49,0.0,0.0,12.98,0.0,25.96,6.49,0.0,19.47,6.49]},"Brooklyn":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98,0.0],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,15.96],"tub_everything":[230.67,97.86,181.72,38.94,181.72,38.94,123.31,38.94,71.39,45.43,51.92,97.35,75.4,191.82,40.93,71.39,58.41,64.9,58.41,116.82,97.35,71.39,74.94,91.53,65.96,90.86,58.41,26.45,73.01,79.41,116.82,90.86,58.41,63.84,9.74,74.64,45.43,51.92,58.41,51.92,58.41,38.94,19.47,32.45,45.43,38.94,38.94,32.45],"tub_hotHoney":[174.75,83.88,151.77,51.92,149.27,77.88,64.9,25.96,90.86,38.94,58.41,84.37,48.46,115.32,31.44,38.94,38.94,51.92,45.43,19.47,58.41,32.45,57.94,66.57,29.45,97.35,71.39,35.48,51.55,69.83,71.39,90.86,38.94,43.28,50.32,55.17,51.92,38.94,58.41,58.41,45.43,25.96,38.94,25.96,38.94,25.96,25.96,32.45]},"Brooklyn Grand Street":{"tub_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,12.98,38.94,19.04,6.49,0.0,25.96,36.99,0.0,9.98,12.98,19.47,17.02,14.97,16.47,12.98,38.94,38.94,21.64,0.0,19.47,19.47,19.47,6.49,25.96,19.47,38.94,6.49,6.49,0.0,6.49,6.49,19.47],"tub_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,12.98,32.45,18.33,32.45,12.98,25.96,33.5,31.06,0.0,0.0,19.47,37.53,20.51,33.49,25.96,12.98,25.96,25.97,30.3,12.98,45.43,6.49,6.49,12.98,19.47,12.98,19.47,6.49,25.96,12.98,25.96,0.0]},"Bryant Park":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98,7.98],"tub_everything":[20.97,6.99,-0.5,0.0,12.98,0.0,19.47,6.49,6.49,12.98,32.45,45.43,5.54,42.67,25.96,6.49,123.31,6.49,71.39,0.0,0.0,0.0,32.56,11.1,17.59,0.0,12.98,11.08,9.98,12.98,6.49,12.98,12.98,22.18,9.74,11.36,0.0,0.0,32.45,12.98,6.49,12.98,0.0,45.43,6.49,11.03,12.98,32.45],"tub_hotHoney":[13.98,27.96,12.98,6.49,19.47,12.98,6.49,12.98,12.98,51.92,32.45,19.47,17.02,9.98,18.52,6.49,77.88,45.43,103.84,12.98,25.96,12.98,46.59,31.62,25.96,12.98,32.45,51.06,11.08,24.46,12.98,19.47,12.98,39.49,15.69,24.88,25.96,6.49,12.98,19.47,0.0,6.49,6.49,25.96,6.49,12.98,12.98,32.45]},"Buffalo":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,23.94],"tub_everything":[13.98,0.0,6.49,6.49,6.49,6.49,12.98,0.0,0.0,0.0,6.49,6.49,0.0,0.0,5.54,0.0,0.0,0.0,0.0,0.0,6.49,6.49,0.0,0.0,0.0,0.0,0.0,11.08,4.99,0.0,6.49,0.0,6.49,0.0,0.0,9.74,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"tub_hotHoney":[13.98,6.99,6.49,6.49,12.98,0.0,0.0,0.0,6.49,19.47,6.49,0.0,9.98,5.54,6.49,6.49,12.98,12.98,19.47,0.0,6.49,0.0,0.0,4.99,4.99,0.0,0.0,16.62,5.54,0.0,0.0,0.0,0.0,0.0,0.0,11.36,12.98,0.0,6.49,6.49,6.49,0.0,0.0,6.49,6.49,0.0,0.0,0.0]},"Chappaqua":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,15.96],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98],"tub_everything":[20.97,34.95,12.98,19.47,6.49,32.45,19.47,19.47,32.45,38.94,12.98,32.45,9.98,4.99,10.53,19.47,12.98,6.49,6.49,25.96,0.0,19.47,9.98,19.97,22.96,6.49,19.47,27.95,14.97,9.98,19.47,6.49,12.98,6.49,15.15,0.0,19.47,19.47,6.49,0.0,12.98,6.49,19.47,0.0,6.49,0.0,6.49,0.0],"tub_hotHoney":[13.98,13.98,25.96,25.96,0.0,12.98,12.98,6.49,0.0,25.96,0.0,38.94,0.0,14.97,5.54,6.49,6.49,12.98,12.98,19.47,12.98,12.98,22.02,15.54,6.49,6.49,6.49,4.99,9.98,6.49,6.49,12.98,19.47,24.89,0.0,6.49,6.49,0.0,12.98,0.0,25.96,12.98,0.0,6.49,0.0,0.0,6.49,12.98]},"Chelsea":{"tub_everything":[41.94,27.96,19.97,12.98,51.92,38.94,38.94,6.49,25.96,32.45,25.96,45.43,55.44,29.94,144.77,90.86,58.41,32.45,58.41,84.37,32.45,64.9,72.41,44.93,53.92,38.94,19.47,58.59,40.47,32.94,32.45,32.45,19.47,24.35,39.5,12.98,25.96,0.0,6.49,6.49,19.47,19.47,25.96,25.96,58.41,25.96,90.86,38.94],"tub_hotHoney":[62.91,34.95,40.44,45.43,38.94,71.39,19.47,32.45,45.43,38.94,51.92,84.37,30.49,41.02,105.43,51.92,71.39,71.39,71.39,51.92,64.9,64.9,135.28,49.92,66.89,51.92,71.39,75.46,85.93,46.47,19.47,38.94,51.92,34.09,24.35,58.43,25.96,90.86,51.92,45.43,32.45,58.41,45.43,38.94,58.41,45.43,97.35,38.94]},"Clark":{"tub_everything":[6.99,0.0,12.98,19.47,0.0,0.0,25.96,12.98,6.49,6.49,6.49,12.98,9.98,9.98,0.0,25.96,6.49,19.47,6.49,0.0,0.0,12.98,0.0,15.53,4.99,6.49,-6.49,19.96,14.97,11.48,12.98,0.0,6.49,16.23,14.61,19.47,6.49,6.49,12.98,32.45,12.98,12.98,0.0,12.98,6.49,32.45,0.0,0.0],"tub_hotHoney":[0.0,0.0,6.49,0.0,6.49,6.49,0.0,6.49,0.0,0.0,12.98,6.49,0.0,29.94,6.49,25.96,0.0,19.47,6.49,0.0,25.96,25.96,6.49,14.98,11.48,25.96,0.0,19.96,9.98,0.0,25.96,12.98,0.0,10.28,15.69,19.47,25.96,6.49,32.45,19.47,6.49,0.0,6.49,6.49,19.47,12.98,12.98,6.49]},"Closter":{"tub_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,9.98,6.49,12.98,6.49,0.0,4.99,0.0,6.49,0.0,6.49,9.74,4.87,11.36,0.0,6.49,6.49,6.49,0.0,0.0,0.0,0.0,0.0,0.0,12.98,6.49],"tub_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,9.98,0.0,19.47,25.96,4.99,0.0,0.0,0.0,6.49,19.47,11.36,9.74,11.36,0.0,6.49,0.0,0.0,0.0,0.0,12.98,0.0,6.49,0.0,0.0,0.0]},"Columbus Circle":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99],"tub_everything":[202.71,188.73,97.85,25.96,90.86,84.37,110.33,32.45,136.29,123.31,168.74,103.84,105.4,134.14,58.41,181.72,45.43,142.78,155.11,64.9,142.78,136.29,77.56,90.47,98.01,19.47,32.45,68.97,50.45,68.39,45.43,45.43,110.33,16.23,63.85,27.59,84.37,110.33,51.92,116.82,51.92,58.41,32.45,45.43,51.92,58.41,38.94,58.41],"tub_hotHoney":[237.66,167.76,117.82,38.94,110.33,77.88,58.41,25.96,84.37,38.94,110.33,84.37,109.84,93.12,40.93,162.25,38.94,129.15,135.64,58.41,110.33,142.78,59.99,91.55,80.06,77.88,58.41,97.47,46.56,188.79,90.86,51.92,103.84,71.41,73.59,70.32,90.86,162.25,110.33,103.84,6.49,32.45,45.43,25.96,38.94,84.37,25.96,58.41]},"Commack":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98],"tub_everything":[6.99,13.98,6.49,6.49,12.98,25.96,19.47,0.0,6.49,25.96,6.49,12.98,4.99,9.98,4.99,12.98,0.0,6.49,0.0,12.98,0.0,12.98,15.53,10.54,0.0,0.0,0.0,9.98,10.53,0.0,0.0,0.0,6.49,0.0,4.87,0.0,6.49,0.0,0.0,0.0,0.0,0.0,0.0,12.98,6.49,6.49,0.0,12.98],"tub_hotHoney":[6.99,13.98,0.0,0.0,0.0,0.0,12.98,6.49,6.49,6.49,0.0,12.98,4.99,19.96,16.47,19.47,0.0,12.98,0.0,0.0,0.0,0.0,4.99,4.99,6.49,6.49,0.0,15.52,4.99,0.0,6.49,0.0,0.0,6.49,14.61,4.87,6.49,6.49,0.0,0.0,0.0,0.0,6.49,0.0,12.98,0.0,6.49,0.0]},"Danbury":{"tub_everything":[20.97,13.98,20.47,0.0,0.0,0.0,6.49,12.98,12.98,0.0,6.49,19.47,4.99,9.98,0.0,6.49,0.0,0.0,6.49,6.49,6.49,12.98,12.98,15.54,34.45,6.49,12.98,4.99,4.99,16.47,0.0,6.49,0.0,9.74,5.41,0.0,6.49,0.0,6.49,0.0,6.49,19.47,6.49,0.0,6.49,12.98,0.0,6.49],"tub_hotHoney":[0.0,0.0,13.48,12.98,0.0,6.49,12.98,19.47,19.47,6.49,0.0,6.49,0.0,14.97,11.48,19.47,0.0,0.0,12.98,12.98,19.47,6.49,0.0,9.98,6.49,12.98,0.0,4.99,9.98,0.0,6.49,0.0,0.0,9.74,10.82,0.0,0.0,12.98,12.98,0.0,12.98,0.0,6.49,25.96,19.47,0.0,0.0,0.0]},"Darien":{"tub_everything":[104.85,55.92,19.47,12.98,6.49,25.96,12.98,12.98,12.98,6.49,12.98,6.49,21.46,25.5,0.0,12.98,0.0,12.98,19.47,0.0,12.98,12.98,17.97,24.97,25.02,6.49,0.0,9.98,4.99,4.99,12.98,6.49,6.49,0.0,9.74,4.87,6.49,6.49,0.0,0.0,0.0,6.49,6.49,12.98,6.49,0.0,0.0,6.49],"tub_hotHoney":[13.98,34.95,13.48,25.96,12.98,12.98,19.47,0.0,0.0,0.0,6.49,6.49,0.0,4.99,11.48,6.49,6.49,12.98,0.0,12.98,0.0,12.98,17.98,4.99,24.46,19.47,0.0,16.47,0.0,0.0,0.0,0.0,0.0,9.74,4.87,12.98,0.0,12.98,6.49,12.98,6.49,12.98,12.98,6.49,0.0,0.0,0.0,0.0]},"East 57th Street":{"tub_everything":[34.95,34.95,52.92,32.45,45.43,19.47,32.45,12.98,19.47,19.47,12.98,32.45,55.99,77.6,12.98,6.49,32.45,12.98,19.47,12.98,19.47,6.49,20.52,25.51,11.1,6.49,12.98,17.02,20.51,9.98,19.47,6.49,12.98,42.2,25.43,34.62,58.41,19.47,38.94,38.94,32.45,45.43,38.94,32.45,19.47,19.47,6.49,6.49],"tub_hotHoney":[41.94,34.95,40.94,25.96,25.96,25.96,19.47,12.98,38.94,32.45,25.96,51.92,25.5,60.98,35.94,19.47,19.47,51.92,32.45,19.47,6.49,12.98,38.49,14.97,12.04,6.49,32.45,31.04,24.95,34.44,12.98,6.49,19.47,34.08,40.58,21.1,38.94,64.9,71.39,38.94,38.94,32.45,25.96,19.47,25.96,32.45,12.98,25.96]},"Eatontown":{"tub_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,6.49,6.49,0.0,6.49,0.0,0.0,0.0,0.0],"tub_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,6.49,0.0,6.49,0.0,0.0,0.0,0.0]},"Edgewater":{"tub_everything":[13.98,0.0,6.49,19.47,0.0,6.49,12.98,19.47,25.96,0.0,6.49,25.96,9.98,0.0,19.47,6.49,19.47,25.96,6.49,19.47,12.98,12.98,14.99,9.98,22.97,25.96,6.49,26.45,10.53,30.95,12.98,12.98,0.0,4.87,5.41,18.39,6.49,12.98,0.0,0.0,19.47,6.49,0.0,6.49,12.98,6.49,6.49,12.98],"tub_hotHoney":[6.99,13.98,6.49,12.98,0.0,0.0,32.45,0.0,6.49,6.49,6.49,12.98,5.54,4.99,0.0,19.47,6.49,6.49,12.98,6.49,0.0,0.0,19.98,14.98,27.95,38.94,6.49,11.48,34.93,6.49,19.47,0.0,6.49,9.74,14.61,4.87,0.0,6.49,12.98,12.98,6.49,6.49,6.49,12.98,12.98,19.47,0.0,6.49]},"Fairfield":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99,0.0],"tub_everything":[27.96,0.0,19.47,25.96,123.31,58.41,6.49,32.45,19.47,19.47,0.0,12.98,9.98,32.14,0.0,0.0,12.98,6.49,6.49,12.98,25.96,12.98,9.99,5.0,0.0,19.47,6.49,14.97,14.97,4.99,6.49,0.0,6.49,6.49,9.74,6.49,12.98,12.98,6.49,0.0,0.0,0.0,0.0,6.49,6.49,6.49,0.0,0.0],"tub_hotHoney":[34.95,6.99,6.99,6.49,58.41,32.45,12.98,0.0,12.98,19.47,6.49,0.0,4.99,4.99,6.49,6.49,0.0,12.98,6.49,0.0,12.98,25.96,20.52,4.99,5.0,6.49,12.98,6.49,30.49,11.48,6.49,6.49,6.49,9.74,9.74,16.23,12.98,19.47,6.49,0.0,6.49,0.0,19.47,12.98,0.0,25.96,12.98,6.49]},"Fort Greene":{"tub_everything":[139.8,62.91,109.34,38.94,97.35,110.83,51.92,38.94,45.43,97.85,25.96,51.92,55.1,40.47,50.42,38.94,58.41,32.45,51.92,38.94,32.45,45.43,65.13,85.4,17.04,45.43,25.96,49.01,40.47,44.57,38.94,45.43,19.47,56.27,50.32,43.81,25.96,38.94,19.47,12.98,32.45,25.96,77.88,58.41,51.92,77.38,77.88,12.98],"tub_hotHoney":[97.86,13.98,27.96,32.45,58.41,84.87,25.96,12.98,38.94,32.45,38.94,51.92,33.49,36.03,19.47,32.45,64.9,38.94,6.49,19.47,19.47,38.94,34.44,75.41,16.48,32.45,25.96,34.93,41.02,52.96,58.41,25.96,38.94,54.11,15.15,34.08,58.41,51.92,12.98,71.39,25.96,51.92,51.92,45.43,58.41,38.94,32.45,45.43]},"Greenwich":{"tub_everything":[153.78,265.62,71.89,25.96,97.35,6.49,103.84,0.0,19.47,6.49,19.47,90.86,92.42,45.46,77.88,84.37,19.47,51.92,77.88,12.98,38.94,12.98,51.03,26.63,0.0,25.96,6.49,16.47,15.52,12.98,12.98,38.94,6.49,25.96,4.87,0.0,32.45,-5.2,64.9,12.98,12.98,6.49,6.49,32.45,32.45,12.98,0.0,19.47],"tub_hotHoney":[62.91,202.71,47.43,25.96,51.92,19.47,64.9,12.98,12.98,19.47,32.45,77.88,42.92,21.61,50.42,25.96,12.98,64.9,64.9,12.98,38.94,0.0,26.07,34.94,0.0,19.47,12.98,6.49,19.96,24.46,32.45,38.94,12.98,38.94,4.87,17.85,25.96,14.28,45.43,12.98,6.49,19.47,6.49,38.94,6.49,0.0,12.98,12.98]},"Harlem":{"tub_everything":[90.87,139.8,82.88,12.98,45.43,90.86,12.98,6.49,6.49,25.96,51.92,12.98,39.43,24.95,12.98,58.41,19.47,12.98,84.37,51.92,45.43,12.98,49.6,20.53,42.44,6.49,6.49,27.0,9.98,27.0,51.92,6.49,45.43,15.15,20.02,37.32,32.45,38.94,58.41,12.98,116.82,6.49,12.98,6.49,64.9,12.98,25.96,19.47],"tub_hotHoney":[132.81,104.85,68.4,25.96,51.92,38.94,32.45,12.98,45.43,32.45,45.43,25.96,30.49,62.63,17.57,19.47,19.47,25.96,51.92,19.47,64.9,12.98,31.62,24.95,17.98,32.45,19.47,11.48,14.97,0.0,71.39,12.98,32.45,36.25,34.63,84.37,71.39,45.43,90.86,25.96,84.37,12.98,32.45,6.49,0.0,4.54,6.49,12.98],"tub_plain":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,38.94,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"Hoboken":{"tub_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,25.29,24.03,19.47,12.98,21.46,14.97,16.47,12.98,38.94,12.98,6.49,19.47,19.47,12.98,12.04,14.97,4.99,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"tub_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,6.49,12.98,12.98,12.98,34.44,45.46,38.48,0.0,0.0,19.47,12.98,45.43,12.98,0.0,18.53,5.55,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"Holbrook":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98],"tub_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,12.98,0.0,5.59,0.0,0.0,0.0,4.99,0.0,12.98,0.0,9.98,0.0,4.99,0.0,0.0,0.0,0.0,9.74,6.49,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,19.47,0.0,0.0,0.0],"tub_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,12.98,0.0,0.0,10.54,0.0,0.0,0.0,6.49,4.99,14.97,4.99,0.0,0.0,6.49,6.49,0.0,0.0,0.0,0.0,0.0,6.49,0.0,0.0,0.0,0.0,19.47,0.0,0.0,0.0]},"Huntington Station":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99],"tub_everything":[0.0,0.0,6.49,6.49,0.0,0.0,6.49,0.0,0.0,0.0,0.0,0.0,10.53,14.97,0.0,0.0,0.0,0.0,0.0,0.0,6.49,25.96,6.49,11.1,0.0,12.98,12.98,16.47,4.99,0.0,6.49,0.0,6.49,4.87,0.0,0.0,6.49,12.98,6.49,6.49,0.0,6.49,0.0,0.0,32.45,0.0,0.0,6.49],"tub_hotHoney":[0.0,6.99,0.0,6.49,6.49,6.49,0.0,0.0,0.0,0.0,6.49,0.0,4.99,19.96,0.0,0.0,0.0,0.0,12.98,6.49,6.49,0.0,0.0,0.0,4.69,6.49,12.98,11.48,4.99,11.48,0.0,0.0,0.0,0.0,4.87,6.49,0.0,12.98,0.0,0.0,0.0,0.0,0.0,0.0,25.96,0.0,0.0,6.49]},"Industry City":{"tub_everything":[41.94,48.93,47.43,19.47,71.39,38.94,32.45,25.96,51.92,77.88,38.94,64.9,39.92,54.89,65.39,25.96,45.43,77.88,45.43,64.9,6.49,58.41,67.98,80.55,37.98,19.47,32.45,60.89,64.87,34.93,6.49,38.94,6.49,22.72,43.83,48.69,19.47,19.47,45.43,38.94,25.96,19.47,12.98,45.43,25.96,19.47,19.47,19.47],"tub_hotHoney":[13.98,0.0,12.98,12.98,25.96,19.47,12.98,12.98,32.45,25.96,25.96,25.96,26.45,29.94,62.39,19.47,12.98,32.45,38.94,45.43,38.94,32.45,50.96,40.0,17.98,6.49,25.96,19.96,49.9,12.98,51.92,38.94,19.47,51.94,63.31,6.49,58.41,25.96,6.49,38.94,38.94,51.92,6.49,58.41,45.43,32.45,32.45,19.47]},"Jericho":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,23.94],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99],"tub_everything":[6.99,13.98,13.98,0.0,6.49,12.98,6.49,19.47,12.98,19.47,6.49,25.96,14.97,9.98,0.0,19.47,19.47,12.98,0.0,6.49,6.49,6.49,4.99,19.98,6.49,0.0,25.96,5.54,4.99,6.49,0.0,0.0,0.0,9.74,0.0,4.87,6.49,0.0,0.0,0.0,0.0,6.49,0.0,25.96,0.0,0.0,6.49,64.9],"tub_hotHoney":[6.99,6.99,16.73,29.2,19.47,32.45,6.49,0.0,12.98,0.0,12.98,3.25,4.99,0.0,9.98,12.98,12.98,6.49,6.49,6.49,6.49,0.0,14.98,14.98,6.49,6.49,6.49,0.0,9.98,6.49,6.49,12.98,0.0,9.74,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,12.98,12.98,0.0,0.0,12.98,32.45]},"Jersey City":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99],"tub_everything":[398.43,167.76,182.72,51.92,142.78,77.88,45.43,32.45,90.86,97.35,51.92,155.76,55.44,190.93,163.29,64.9,123.31,45.43,97.35,45.43,97.35,142.78,48.49,31.64,108.83,38.94,19.47,38.08,14.97,43.93,84.37,25.96,25.96,43.83,29.76,90.9,103.84,155.76,64.9,162.25,64.9,51.92,77.88,129.8,90.86,103.84,110.33,32.45],"tub_hotHoney":[209.7,139.8,92.36,51.92,149.27,71.39,38.94,25.96,64.9,103.84,25.96,188.21,46.41,137.88,138.28,129.8,116.82,45.43,116.82,64.9,129.8,129.8,49.21,70.98,117.49,25.96,32.45,36.43,30.49,55.41,90.86,38.94,12.98,34.63,43.83,102.79,123.31,149.27,38.94,77.88,64.9,77.88,64.9,155.76,64.9,88.91,136.29,84.37]},"Lake Grove":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99],"tub_everything":[13.98,0.0,0.0,12.98,19.47,6.49,19.47,12.98,6.49,12.98,0.0,12.98,4.99,4.99,6.49,12.98,19.47,19.47,19.47,6.49,12.98,12.98,4.99,5.55,12.98,12.98,6.49,10.53,14.97,22.96,0.0,0.0,6.49,9.74,0.0,0.0,12.98,0.0,0.0,0.0,0.0,12.98,6.49,12.98,0.0,12.98,12.98,6.49],"tub_hotHoney":[13.98,6.99,0.0,6.49,19.47,6.49,6.49,0.0,0.0,12.98,12.98,6.49,20.51,4.99,0.0,12.98,19.47,6.49,6.49,0.0,12.98,6.49,4.99,4.99,6.49,6.49,12.98,6.49,14.97,0.0,19.47,6.49,6.49,4.87,14.61,6.49,6.49,6.49,0.0,0.0,0.0,19.47,0.0,12.98,0.0,0.0,6.49,6.49]},"Lenox Hill":{"tub_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-3.49,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"Manhasset":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99],"tub_everything":[6.99,34.95,46.43,19.47,19.47,6.49,32.45,25.96,12.98,25.96,6.49,32.45,9.98,0.0,6.49,12.98,6.49,12.98,12.98,0.0,6.49,6.49,4.99,29.94,12.98,0.0,6.49,31.44,4.99,24.46,6.49,19.47,6.49,32.46,14.61,6.49,25.96,6.49,6.49,6.49,12.98,6.49,6.49,0.0,6.49,6.49,6.49,51.92],"tub_hotHoney":[0.0,13.98,6.49,25.96,12.98,0.0,19.47,12.98,25.96,19.47,19.47,12.98,9.98,14.97,19.47,12.98,19.47,19.47,19.47,12.98,6.49,12.98,28.51,10.54,16.49,6.49,0.0,30.49,0.0,6.49,32.45,12.98,12.98,11.36,9.74,0.0,0.0,6.49,12.98,19.47,6.49,0.0,6.49,12.98,19.47,12.98,12.98,45.43]},"Manhattan West":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98],"tub_everything":[188.73,55.92,46.93,19.47,19.47,12.98,12.98,6.49,25.96,32.45,12.98,38.94,30.95,24.95,11.48,38.94,19.47,32.45,71.39,45.43,51.92,71.39,50.42,40.48,47.44,25.96,71.39,36.98,15.52,34.99,25.96,38.94,12.98,6.49,39.5,37.87,12.98,12.98,45.43,32.45,32.45,6.49,12.98,38.94,6.49,25.96,19.47,19.47],"tub_hotHoney":[76.89,48.93,39.44,19.47,19.47,38.94,25.96,19.47,19.47,19.47,45.43,12.98,26.6,31.04,41.48,45.43,32.45,25.96,58.41,19.47,58.41,32.45,32.45,30.5,55.47,58.41,51.92,20.51,14.97,12.98,32.45,12.98,45.43,43.82,43.83,42.19,25.96,12.98,12.98,32.45,25.96,25.96,6.49,19.47,12.98,32.45,12.98,25.96]},"Marlboro":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98],"tub_everything":[6.99,6.99,38.94,12.98,12.98,25.96,0.0,6.49,0.0,6.49,12.98,6.49,6.49,4.99,0.0,6.49,0.0,19.47,0.0,25.96,6.49,19.47,14.99,4.99,27.97,12.98,6.49,16.47,4.99,21.46,0.0,0.0,6.49,4.87,0.0,11.36,6.49,12.98,19.47,12.98,0.0,12.98,25.96,0.0,0.0,6.49,0.0,0.0],"tub_hotHoney":[20.97,0.0,0.0,0.0,0.0,0.0,0.0,12.98,6.49,6.49,0.0,6.49,0.0,15.52,6.49,25.96,12.98,19.47,12.98,19.47,6.49,0.0,14.99,10.54,11.49,0.0,12.98,4.99,9.98,9.98,0.0,6.49,6.49,4.87,4.87,29.21,0.0,12.98,6.49,0.0,19.47,6.49,12.98,12.98,6.49,12.98,6.49,0.0]},"Massapequa":{"tub_everything":[20.97,6.99,6.99,12.98,6.49,6.49,6.49,6.49,0.0,6.49,12.98,19.47,10.53,10.53,0.0,0.0,0.0,6.49,6.49,6.49,12.98,6.49,11.48,9.99,4.99,6.49,19.47,11.48,9.98,0.0,0.0,0.0,0.0,0.0,10.28,0.0,0.0,0.0,6.49,6.49,0.0,12.98,0.0,0.0,32.45,0.0,6.49,45.43],"tub_hotHoney":[0.0,13.98,0.0,12.98,19.47,12.98,0.0,19.47,0.0,6.49,0.0,12.98,11.48,4.99,0.0,6.49,0.0,12.98,6.49,0.0,19.47,6.49,4.99,0.0,6.49,6.49,12.98,6.49,9.98,0.0,0.0,0.0,0.0,0.0,4.87,11.9,0.0,6.49,6.49,0.0,6.49,0.0,6.49,0.0,19.47,0.0,0.0,45.43]},"Metuchen":{"tub_everything":[6.99,6.99,6.99,6.49,12.98,0.0,6.49,0.0,25.96,12.98,6.49,0.0,11.48,19.96,0.0,19.47,6.49,6.49,0.0,6.49,12.98,0.0,15.0,19.97,0.0,25.96,0.0,4.99,4.99,0.0,12.98,0.0,6.49,4.87,4.87,0.0,6.49,12.98,0.0,0.0,12.98,25.96,0.0,6.49,0.0,0.0,6.49,0.0],"tub_hotHoney":[6.99,0.0,0.0,12.98,0.0,0.0,19.47,0.0,12.98,0.0,6.49,0.0,4.99,9.98,0.0,12.98,0.0,6.49,12.98,12.98,19.47,12.98,9.98,9.99,0.0,6.49,0.0,6.49,4.99,6.49,0.0,0.0,0.0,9.74,4.87,29.21,6.49,12.98,6.49,0.0,12.98,6.49,6.49,0.0,19.47,6.49,6.49,6.49]},"Middletown":{"tub_everything":[0.0,13.98,6.49,25.96,6.49,12.98,19.47,19.47,0.0,6.49,6.49,0.0,4.99,4.99,6.49,0.0,0.0,12.98,25.96,19.47,6.49,0.0,4.99,0.0,0.0,0.0,6.49,0.0,4.99,0.0,6.49,0.0,19.47,9.74,16.23,6.49,0.0,0.0,0.0,0.0,19.47,0.0,0.0,0.0,0.0,0.0,0.0,6.49],"tub_hotHoney":[6.99,13.98,12.98,12.98,0.0,6.49,12.98,12.98,6.49,0.0,12.98,6.49,0.0,0.0,6.49,6.49,0.0,6.49,0.0,6.49,6.49,12.98,4.99,9.98,6.49,6.49,0.0,11.48,0.0,30.95,0.0,6.49,0.0,6.49,24.89,12.98,0.0,6.49,6.49,0.0,12.98,0.0,0.0,0.0,0.0,0.0,0.0,6.49]},"Milford":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99,0.0],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99],"tub_everything":[27.96,13.98,32.95,0.0,12.98,19.47,0.0,25.96,6.49,6.49,6.49,25.96,10.53,4.99,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"tub_hotHoney":[6.99,13.98,6.99,0.0,6.49,6.49,0.0,0.0,6.49,25.96,0.0,19.47,11.48,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"Millburn Union":{"tub_everything":[13.98,6.99,0.0,0.0,6.49,12.98,32.45,6.49,19.47,0.0,0.0,19.47,4.99,31.04,0.0,19.47,25.96,19.47,12.98,12.98,19.47,19.47,26.47,20.52,5.0,25.96,0.0,5.54,14.97,14.97,12.98,19.47,0.0,0.0,14.61,0.0,12.98,38.94,6.49,0.0,38.94,12.98,19.47,0.0,12.98,19.47,12.98,32.45],"tub_hotHoney":[0.0,0.0,12.98,19.47,6.49,12.98,12.98,19.47,12.98,12.98,19.47,19.47,22.96,4.99,19.47,25.96,19.47,25.96,25.96,19.47,19.47,12.98,19.98,10.54,17.97,19.47,19.47,14.97,14.97,4.99,32.45,0.0,0.0,16.23,4.87,0.0,6.49,0.0,25.96,32.45,32.45,19.47,19.47,6.49,0.0,25.96,12.98,6.49]},"Montclair":{"tub_everything":[6.99,97.86,0.0,6.49,0.0,12.98,0.0,6.49,12.98,6.49,0.0,12.98,0.0,26.05,17.02,25.96,0.0,0.0,6.49,0.0,6.49,0.0,12.98,21.08,6.49,0.0,0.0,45.46,40.47,50.97,6.49,6.49,77.88,34.63,14.61,25.96,0.0,0.0,64.9,32.45,38.94,77.88,25.96,0.0,12.98,19.47,19.47,6.49],"tub_hotHoney":[6.99,34.95,19.47,12.98,32.45,0.0,6.49,0.0,12.98,6.49,32.45,12.98,53.45,15.52,22.96,19.47,19.47,12.98,45.43,6.49,25.96,32.45,21.46,19.96,11.48,12.98,6.49,9.98,55.44,40.93,0.0,6.49,97.35,19.48,10.28,38.94,0.0,19.47,32.45,25.96,38.94,58.41,12.98,12.98,6.49,6.49,0.0,0.0]},"Montgomery NJ":{"tub_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,18.71,12.98,6.49,6.49,6.49,0.0,0.0],"tub_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,12.98,6.49,0.0,6.49,0.0,0.0,0.0]},"Morristown":{"tub_everything":[6.99,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"tub_hotHoney":[6.99,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"Newark":{"tub_everything":[6.99,6.99,19.47,0.0,0.0,0.0,0.0,0.0,38.94,6.49,0.0,0.0,16.47,0.0,0.0,6.49,0.0,6.49,25.96,12.98,0.0,32.45,30.0,4.99,22.96,12.98,12.98,24.95,10.53,6.49,6.49,6.49,0.0,16.23,0.0,11.36,0.0,0.0,0.0,0.0,6.49,0.0,6.49,0.0,12.98,6.49,0.0,0.0],"tub_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,6.49,21.46,29.94,19.47,0.0,0.0,0.0,0.0,19.47,0.0,6.49,22.03,0.0,6.49,6.49,0.0,12.98,14.97,0.0,0.0,6.49,0.0,19.48,4.87,9.74,0.0,25.96,0.0,0.0,6.49,0.0,6.49,0.0,6.49,0.0,0.0,6.49]},"NoMad":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,23.94],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99,19.95],"tub_everything":[27.96,27.96,53.92,38.94,25.96,38.94,45.43,12.98,64.9,32.45,32.45,12.98,32.94,51.0,53.91,45.43,19.47,32.45,25.96,51.92,12.98,45.43,53.47,30.53,12.04,19.47,19.47,36.43,45.46,20.51,19.47,38.94,6.49,11.36,14.61,41.11,25.96,25.96,12.98,25.96,45.43,25.96,45.43,6.49,19.47,12.98,6.49,32.45],"tub_hotHoney":[27.96,6.99,53.92,32.45,51.92,64.9,25.96,19.47,64.9,32.45,58.41,51.92,68.48,71.51,79.56,90.86,45.43,32.45,12.98,51.92,58.41,58.41,59.95,50.48,47.42,32.45,51.92,37.93,55.44,37.53,19.47,32.45,25.96,31.92,30.3,54.64,58.41,19.47,51.92,45.43,25.96,6.49,64.9,32.45,38.94,19.47,19.47,32.45]},"One Wall Street":{"tub_everything":[139.8,139.8,78.88,77.88,123.31,84.37,58.41,12.98,45.43,97.35,38.94,103.84,62.94,22.01,27.95,45.43,32.45,58.41,58.41,58.41,38.94,32.45,37.55,29.94,55.03,25.96,19.47,22.56,30.49,4.99,32.45,51.92,6.49,25.97,30.3,29.21,38.94,19.47,19.47,25.96,25.96,25.96,19.47,32.45,19.47,45.43,38.94,45.43],"tub_hotHoney":[90.87,90.87,99.35,32.45,90.86,77.88,51.92,25.96,64.9,19.47,58.41,71.39,78.46,47.66,14.97,38.94,45.43,58.41,32.45,51.92,25.96,19.47,62.95,44.91,50.98,25.96,38.94,22.01,29.94,27.0,45.43,25.96,32.45,21.1,15.15,16.77,25.96,45.43,25.96,25.96,51.92,25.96,19.47,12.98,58.41,25.96,64.9,12.98]},"Paramus":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,11.97],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99],"tub_everything":[6.99,0.0,12.98,25.96,6.49,12.98,6.49,6.49,32.45,6.49,6.49,0.0,15.52,36.03,5.54,12.98,6.49,12.98,19.47,6.49,19.47,6.49,4.99,30.51,27.96,12.98,12.98,11.48,9.98,56.91,19.47,6.49,51.92,73.05,19.48,12.98,58.41,58.41,6.49,6.49,64.9,77.88,19.47,0.0,-6.49,12.98,0.0,25.96],"tub_hotHoney":[0.0,6.99,6.49,6.49,6.49,12.98,12.98,12.98,12.98,32.45,6.49,12.98,6.49,26.05,12.98,-6.49,19.47,0.0,0.0,0.0,6.49,19.47,19.97,14.97,6.49,12.98,12.98,9.98,19.96,50.42,19.47,0.0,71.39,38.96,10.28,12.98,38.94,35.69,12.98,19.47,51.92,32.45,12.98,12.98,-6.49,25.96,6.49,12.98]},"Parsippany":{"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98],"tub_everything":[0.0,0.0,6.49,12.98,0.0,6.49,0.0,0.0,6.49,0.0,0.0,6.49,4.99,5.54,12.98,19.47,12.98,0.0,6.49,0.0,0.0,6.49,4.99,14.97,0.0,6.49,12.98,0.0,9.98,6.49,0.0,0.0,0.0,11.36,10.28,12.98,12.98,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,12.98,0.0,6.49],"tub_hotHoney":[6.99,0.0,12.98,0.0,0.0,6.49,0.0,0.0,0.0,6.49,0.0,6.49,0.0,4.99,0.0,0.0,12.98,0.0,6.49,12.98,0.0,0.0,0.0,5.55,0.0,0.0,19.47,0.0,9.98,17.97,0.0,12.98,0.0,14.61,14.61,25.96,12.98,19.47,0.0,25.96,32.45,19.47,0.0,32.45,0.0,25.96,6.49,12.98]},"Port Chester":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,11.97],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98],"tub_everything":[0.0,174.75,59.41,6.49,6.49,12.98,6.49,6.49,0.0,25.96,12.98,6.49,11.48,39.92,6.49,19.47,6.49,12.98,6.49,45.43,0.0,25.96,9.99,21.09,34.45,6.49,12.98,10.53,20.51,6.49,6.49,6.49,6.49,9.74,9.74,19.47,19.47,12.98,0.0,0.0,0.0,0.0,0.0,12.98,12.98,0.0,0.0,0.0],"tub_hotHoney":[6.99,90.87,32.45,6.49,12.98,19.47,0.0,12.98,6.49,25.96,0.0,12.98,0.0,14.97,0.0,0.0,0.0,0.0,19.47,19.47,6.49,0.0,4.99,9.98,19.47,19.47,25.96,4.99,9.98,0.0,6.49,6.49,6.49,19.48,0.0,24.34,6.49,6.49,12.98,0.0,0.0,6.49,0.0,6.49,12.98,11.03,0.0,12.98]},"Ridgewood":{"tub_everything":[0.0,13.98,0.0,12.98,0.0,0.0,12.98,0.0,0.0,12.98,6.49,0.0,0.0,4.99,0.0,6.49,0.0,0.0,0.0,0.0,6.49,6.49,4.99,4.99,0.0,0.0,0.0,0.0,4.99,6.49,0.0,6.49,97.35,3.79,4.87,14.61,6.49,0.0,0.0,0.0,6.49,0.0,6.49,0.0,0.0,0.0,0.0,6.49],"tub_hotHoney":[0.0,13.98,0.0,12.98,12.98,0.0,6.49,6.49,19.47,6.49,12.98,25.96,4.99,9.98,12.98,12.98,19.47,0.0,6.49,6.49,0.0,12.98,14.98,4.99,16.47,6.49,0.0,30.49,0.0,6.49,6.49,6.49,116.82,-6.49,9.74,4.87,12.98,6.49,25.96,19.47,6.49,19.47,19.47,6.49,6.49,0.0,6.49,6.49]},"Rochester":{"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99],"tub_everything":[13.98,0.0,13.48,12.98,0.0,0.0,0.0,0.0,0.0,6.49,0.0,12.98,0.0,0.0,6.49,0.0,0.0,6.49,6.49,0.0,6.49,0.0,0.0,0.0,0.0,25.96,12.98,0.0,0.0,12.98,0.0,0.0,6.49,6.49,9.74,0.0,0.0,0.0,0.0,12.98,0.0,0.0,0.0,0.0,6.49,6.49,6.49,0.0],"tub_hotHoney":[13.98,6.99,26.96,6.49,38.94,25.96,0.0,6.49,0.0,6.49,0.0,12.98,12.03,19.96,0.0,6.49,12.98,0.0,6.49,6.49,6.49,0.0,11.48,9.98,10.54,0.0,6.49,4.99,9.98,4.99,6.49,12.98,25.96,0.0,14.61,0.0,6.49,6.49,0.0,6.49,0.0,19.47,19.47,6.49,6.49,0.0,0.0,6.49]},"Rose City":{"tub_everything":[6.99,6.99,12.98,0.0,0.0,19.47,12.98,6.49,32.45,6.49,19.47,6.49,29.94,9.98,0.0,0.0,6.49,0.0,6.49,12.98,0.0,0.0,4.99,4.99,12.98,0.0,0.0,21.46,14.97,6.49,6.49,6.49,6.49,3.25,9.74,0.0,19.47,0.0,6.49,0.0,5.95,6.49,6.49,0.0,6.49,0.0,19.47,12.98],"tub_hotHoney":[6.99,13.98,13.48,19.47,6.49,19.47,25.96,0.0,38.94,6.49,6.49,12.98,31.99,24.95,11.48,6.49,19.47,19.47,6.49,19.47,19.47,19.47,9.98,0.0,12.98,12.98,19.47,9.98,9.98,16.47,0.0,19.47,6.49,4.87,9.74,11.36,0.0,12.98,12.98,6.49,6.49,12.98,6.49,0.0,0.0,0.0,6.49,12.98]},"Stamford":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,11.97],"tub_everything":[34.95,20.97,181.72,19.47,6.49,6.49,25.96,0.0,12.98,25.96,6.49,38.94,0.0,0.0,11.48,19.47,6.49,0.0,6.49,6.49,12.98,12.98,0.0,4.99,0.0,12.98,6.49,4.99,4.99,4.99,6.49,12.98,32.45,14.61,24.35,9.74,6.49,0.0,0.0,0.0,0.0,0.0,0.0,6.49,12.98,19.47,6.49,0.0],"tub_hotHoney":[6.99,0.0,77.88,12.98,12.98,6.49,0.0,0.0,0.0,0.0,0.0,6.49,4.99,9.98,25.96,11.48,19.47,0.0,6.49,12.98,12.98,12.98,9.98,4.99,4.99,12.98,12.98,4.99,10.53,6.49,0.0,12.98,6.49,16.23,34.63,32.45,12.98,12.98,6.49,0.0,6.49,12.98,19.47,25.96,12.98,6.49,0.0,0.0]},"Tribeca":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99,23.94],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.98,31.92],"tub_everything":[314.55,251.64,124.81,77.88,110.33,58.41,136.29,19.47,227.15,58.41,123.31,129.8,81.55,112.53,156.25,110.33,110.33,64.9,25.96,64.9,71.39,58.41,49.42,108.17,92.41,25.96,25.96,68.97,42.12,232.84,71.39,45.43,32.45,40.58,24.89,51.93,19.47,51.92,0.0,25.96,32.45,19.47,19.47,45.43,32.45,64.9,25.96,64.9],"tub_hotHoney":[223.68,139.8,137.79,45.43,64.9,51.92,90.86,6.49,129.8,58.41,77.88,77.88,96.52,128.6,120.31,97.35,110.33,58.41,71.39,64.9,123.31,51.92,57.58,122.01,91.92,123.31,45.43,86.14,50.45,222.4,64.9,58.41,71.39,29.76,24.89,78.97,45.43,51.92,71.39,32.45,58.41,58.41,51.92,25.96,19.47,84.37,77.88,51.92]},"Union Square":{"tub_everything":[69.9,41.94,45.93,6.49,19.47,19.47,25.96,32.45,38.94,51.92,25.96,45.43,82.5,103.1,30.0,45.43,64.9,51.92,103.84,51.92,64.9,58.41,57.17,77.11,68.53,45.43,32.45,49.01,45.46,44.57,19.47,45.43,51.92,54.64,29.22,32.45,45.43,32.45,12.98,12.98,32.45,110.33,110.33,25.96,12.98,0.0,45.43,6.49],"tub_hotHoney":[41.94,41.94,54.92,12.98,38.94,45.43,38.94,19.47,51.92,38.94,25.96,71.39,57.49,39.92,36.49,64.9,19.47,84.37,51.92,38.94,51.92,64.9,56.08,45.5,41.5,12.98,64.9,50.11,41.02,32.94,19.47,45.43,0.0,24.88,50.86,39.49,19.47,51.92,12.98,45.43,38.94,77.88,64.9,19.47,19.47,6.49,38.94,12.98]},"Upper East Side":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99],"tub_everything":[34.95,48.93,68.9,12.98,38.94,25.96,51.92,45.43,71.39,38.94,32.45,25.96,46.01,4.99,6.49,32.45,90.86,25.96,12.98,38.94,45.43,19.47,25.51,50.46,35.0,19.47,32.45,46.62,14.97,49.96,0.0,25.96,6.49,31.38,34.63,32.46,19.47,0.0,6.49,12.98,0.0,0.0,12.98,12.98,12.98,0.0,32.45,0.0],"tub_hotHoney":[62.91,83.88,73.89,32.45,25.96,51.92,12.98,25.96,90.86,71.39,51.92,32.45,60.09,15.52,38.48,12.98,45.43,25.96,51.92,45.43,51.92,19.47,27.95,71.54,41.49,12.98,19.47,33.49,20.51,6.49,32.45,12.98,32.45,21.1,9.74,37.87,19.47,38.94,19.47,51.92,25.96,45.43,25.96,19.47,19.47,12.98,32.45,6.49]},"Upper West Side":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,11.97],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,11.97],"tub_everything":[125.82,34.95,65.4,45.43,32.45,38.94,32.45,25.96,19.47,32.45,64.9,64.9,34.99,70.41,21.46,32.45,19.47,12.98,32.45,64.9,136.29,6.49,71.92,39.96,27.97,58.41,25.96,45.46,60.98,4.99,19.47,19.47,32.45,41.12,40.04,37.86,12.98,25.96,6.49,123.31,6.49,19.47,155.76,25.96,38.94,6.49,32.45,25.96],"tub_hotHoney":[62.91,20.97,39.44,12.98,38.94,51.92,12.98,6.49,51.92,25.96,19.47,45.43,31.44,65.42,55.41,64.9,45.43,45.43,58.41,45.43,77.88,90.86,70.43,50.48,58.41,45.43,32.45,45.8,49.9,44.42,38.94,32.45,19.47,21.64,34.14,43.28,38.94,32.45,38.94,71.39,19.47,38.94,168.74,6.49,51.92,38.94,64.9,25.96]},"Wayne":{"tub_everything":[6.99,0.0,0.0,12.98,6.49,6.49,0.0,19.47,0.0,0.0,0.0,6.49,5.54,9.98,0.0,0.0,0.0,19.47,12.98,6.49,0.0,6.49,0.0,9.98,0.0,6.49,0.0,0.0,9.98,0.0,12.98,12.98,0.0,9.74,0.0,0.0,0.0,0.0,0.0,0.0,6.49,6.49,6.49,6.49,0.0,6.49,0.0,0.0],"tub_hotHoney":[0.0,13.98,19.97,0.0,6.49,0.0,0.0,6.49,6.49,19.47,0.0,6.49,0.0,5.54,6.49,6.49,0.0,12.98,6.49,6.49,0.0,6.49,9.98,5.0,16.47,6.49,0.0,14.97,9.98,0.0,6.49,12.98,12.98,4.87,4.87,6.49,6.49,0.0,0.0,0.0,0.0,6.49,12.98,6.49,12.98,6.49,0.0,0.0]},"Weehawken":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,11.97],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,11.97],"tub_everything":[0.0,55.92,12.98,0.0,25.96,6.49,32.45,25.96,64.9,19.47,38.94,58.41,51.95,21.06,125.85,0.0,103.84,6.49,25.96,58.41,45.43,25.96,32.57,34.95,43.94,25.96,6.49,31.49,46.56,28.4,19.47,12.98,19.47,24.89,24.89,29.21,25.96,12.98,12.98,0.0,0.0,0.0,6.49,6.49,0.0,0.0,0.0,0.0],"tub_hotHoney":[20.97,62.91,12.98,12.98,38.94,25.96,6.49,25.96,38.94,19.47,38.94,19.47,46.96,0.0,77.88,0.0,64.9,6.49,19.47,19.47,38.94,0.0,28.51,15.53,37.45,25.96,6.49,24.95,15.52,16.47,0.0,6.49,6.49,4.87,24.89,6.49,19.47,6.49,6.49,19.47,0.0,25.96,25.96,6.49,0.0,0.0,0.0,0.0]},"West Orange":{"tub_everything":[6.99,0.0,0.0,6.49,0.0,0.0,0.0,0.0,6.49,0.0,19.47,6.49,16.47,15.52,0.0,6.49,0.0,12.98,6.49,19.47,6.49,12.98,21.46,29.98,14.98,6.49,6.49,16.47,29.94,6.49,6.49,6.49,0.0,0.0,19.48,29.22,32.45,0.0,32.45,6.49,58.41,58.41,0.0,6.49,12.98,0.0,0.0,6.49],"tub_hotHoney":[6.99,6.99,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,6.49,6.49,9.98,4.99,0.0,0.0,6.49,12.98,0.0,0.0,0.0,6.49,12.98,9.98,4.99,6.49,6.49,0.0,25.5,6.49,12.98,6.49,12.98,11.36,4.87,50.31,25.96,6.49,71.39,0.0,38.94,45.43,12.98,19.47,19.47,6.49,12.98,0.0]},"Westbury":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,19.95],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,19.95],"tub_everything":[55.92,27.96,13.48,38.94,6.49,19.47,25.96,19.47,38.94,25.96,58.41,45.43,31.44,26.05,21.46,45.43,25.96,32.45,19.47,6.49,32.45,32.45,42.93,45.5,40.95,6.49,12.98,27.95,35.48,35.94,19.47,25.96,0.0,25.97,39.5,6.49,25.96,12.98,0.0,0.0,0.0,19.47,6.49,0.0,0.0,71.39,6.49,51.92],"tub_hotHoney":[34.95,34.95,12.98,12.98,19.47,32.45,19.47,6.49,25.96,45.43,25.96,32.45,46.96,19.96,19.47,51.92,38.94,6.49,25.96,25.96,19.47,32.45,49.42,14.99,25.96,0.0,12.98,15.52,9.98,9.98,25.96,32.45,12.98,40.58,15.15,11.36,12.98,0.0,25.96,25.96,6.49,6.49,0.0,6.49,6.49,45.43,6.49,51.92]},"Westport":{"tub_everything":[0.0,27.96,25.96,19.47,12.98,0.0,12.98,6.49,25.96,0.0,0.0,6.49,24.95,9.98,6.49,6.49,0.0,6.49,6.49,6.49,19.47,0.0,5.0,4.99,0.0,19.47,6.49,0.0,11.08,0.0,6.49,6.49,6.49,0.0,0.0,6.49,12.98,6.49,6.49,0.0,6.49,0.0,6.49,0.0,0.0,12.98,0.0,6.49],"tub_hotHoney":[0.0,6.99,12.98,12.98,6.49,6.49,6.49,25.96,19.47,12.98,6.49,12.98,4.99,9.98,5.54,32.45,0.0,12.98,6.49,6.49,12.98,19.47,4.99,0.0,6.49,12.98,25.96,0.0,9.98,9.98,6.49,19.47,0.0,10.28,14.61,0.0,0.0,6.49,6.49,6.49,12.98,6.49,12.98,0.0,12.98,6.49,12.98,19.47]},"White Plains":{"tub_everything":[20.97,62.91,55.42,0.0,0.0,12.98,12.98,0.0,0.0,0.0,19.47,0.0,9.98,4.99,4.99,0.0,32.45,12.98,25.96,6.49,6.49,6.49,11.48,19.98,6.49,6.49,12.98,22.01,34.93,11.48,12.98,6.49,12.98,22.72,20.02,0.0,6.49,6.49,6.49,12.98,0.0,0.0,0.0,6.49,0.0,6.49,0.0,0.0],"tub_hotHoney":[0.0,55.92,50.23,25.96,6.49,6.49,12.98,25.96,38.94,12.98,25.96,32.45,14.97,24.95,6.49,38.94,19.47,32.45,12.98,25.96,0.0,12.98,9.99,14.98,6.49,19.47,25.96,26.05,27.15,6.49,0.0,6.49,19.47,4.87,4.87,24.34,0.0,0.0,12.98,6.49,12.98,6.49,12.98,12.98,6.49,6.49,0.0,0.0]},"Williamsburg":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,23.94],"dip_hotHoney":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,23.94],"tub_everything":[223.68,258.63,184.22,266.09,220.66,116.82,162.25,77.88,142.78,214.17,137.59,207.68,115.68,219.52,182.25,162.25,228.45,175.23,129.8,201.19,181.72,162.25,142.9,120.38,246.82,116.82,77.88,206.11,95.91,106.96,116.82,155.76,71.39,89.81,38.96,168.74,129.8,110.33,71.39,129.8,51.92,77.88,207.68,97.35,38.94,116.82,110.33,103.84],"tub_hotHoney":[209.7,146.79,137.29,175.23,129.8,116.82,123.31,71.39,103.84,227.15,175.23,188.21,94.22,288.24,214.75,272.58,201.19,103.84,136.29,279.07,136.29,84.37,115.48,103.16,214.22,142.78,116.82,149.42,144.67,76.87,136.29,97.35,123.31,80.06,39.5,63.28,25.96,129.8,64.9,129.8,77.88,58.41,155.76,129.8,58.41,142.78,84.37,97.35]},"Woodcliff Lake":{"dip_everything":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.99,11.97],"tub_everything":[6.99,13.98,6.49,6.49,0.0,12.98,12.98,-6.49,0.0,6.49,6.49,0.0,0.0,0.0,0.0,0.0,6.49,19.47,6.49,6.49,6.49,0.0,4.99,14.98,0.0,6.49,6.49,9.98,10.53,0.0,12.98,12.98,0.0,0.0,29.76,4.87,0.0,0.0,0.0,0.0,0.0,0.0,0.0,6.49,6.49,6.49,6.49,6.49],"tub_hotHoney":[0.0,20.97,19.97,12.98,12.98,6.49,19.47,6.49,12.98,0.0,0.0,19.47,4.99,10.53,6.49,0.0,6.49,12.98,0.0,6.49,25.96,6.49,0.0,10.54,6.49,19.47,0.0,9.98,14.97,11.48,0.0,6.49,19.47,0.0,29.22,11.36,12.98,12.98,12.98,6.49,0.0,0.0,0.0,12.98,6.49,0.0,12.98,0.0]},"Yonkers":{"tub_everything":[0.0,13.98,40.94,6.49,25.96,6.49,0.0,6.49,0.0,19.47,12.98,6.49,9.98,9.98,17.97,6.49,19.47,6.49,6.49,0.0,0.0,19.47,10.55,10.0,6.49,6.49,0.0,4.99,19.96,16.47,6.49,6.49,0.0,9.74,4.87,4.87,6.49,6.49,6.49,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,6.49],"tub_hotHoney":[13.98,13.98,27.46,12.98,12.98,12.98,0.0,0.0,12.98,19.47,19.47,0.0,4.99,9.98,4.99,19.47,0.0,6.49,25.96,6.49,6.49,6.49,5.0,9.99,11.49,6.49,0.0,0.0,16.47,17.97,12.98,0.0,6.49,6.49,4.87,12.98,12.98,6.49,25.96,19.47,0.0,25.96,12.98,19.47,6.49,19.47,6.49,6.49]}},"demos":[["Bowery","2025-10-04",15,13,37.5],["Tribeca","2025-10-05",17,17,56.25],["Williamsburg","2025-10-05",23,23,53.75],["Jericho","2025-10-06",10,26,100.0],["Bowery","2025-10-07",57,36,110.0],["Columbus Circle","2025-10-08",60,45,123.75],["Williamsburg","2025-10-08",42,39,110.0],["Union Square","2025-10-09",17,17,100.0],["Tribeca","2025-10-11",80,30,100.0],["Bowery","2025-10-13",39,40,105.0],["Tribeca","2025-10-14",37,27,50.0],["Jersey City","2025-10-15",53,53,160.0],["Union Square","2025-10-16",42,41,130.0],["Brooklyn","2025-10-18",75,45,102.92],["Columbus Circle","2025-10-18",66,35,110.0],["Williamsburg","2025-10-19",60,48,130.0],["Bowery","2025-10-20",16,16,25.0],["Union Square","2025-10-20",23,23,83.33],["Tribeca","2025-10-22",24,24,75.0],["Bowery","2025-10-23",24,55,172.5],["Fort Greene","2025-10-24",54,47,142.5],["Greenwich","2025-10-25",13,32,110.0],["Williamsburg","2025-10-25",52,27,100.0],["Columbus Circle","2025-10-26",53,33,110.0],["Union Square","2025-10-28",0,35,110.0],["Bowery","2025-10-29",26,21,91.67],["Brooklyn","2025-10-31",52,37,110.0],["Jersey City","2025-11-01",50,30,100.0],["Columbus Circle","2025-11-02",57,35,110.0],["Fairfield","2025-11-02",34,34,110.0],["Fort Greene","2025-11-02",11,18,105.0],["Tribeca","2025-11-02",45,42,130.0],["Williamsburg","2025-11-02",45,26,79.17],["Tribeca","2025-11-03",54,45,130.0],["Upper West Side","2025-11-03",18,18,81.25],["Columbus Circle","2025-11-04",38,28,100.0],["Harlem","2025-11-06",31,31,72.5],["Manhattan West","2025-11-06",64,34,110.0],["Brooklyn","2025-11-07",54,41,142.5],["Jersey City","2025-11-07",60,19,41.67],["Columbus Circle","2025-11-08",43,35,110.0],["Darien","2025-11-08",25,15,100.0],["Tribeca","2025-11-08",53,31,85.0],["Fort Greene","2025-11-09",44,22,108.33],["Greenwich","2025-11-09",49,25,100.0],["Jersey City","2025-11-09",64,58,166.25],["Williamsburg","2025-11-09",96,33,78.75],["Weehawken","2025-11-10",14,14,50.0],["White Plains","2025-11-10",16,14,100.0],["Columbus Circle","2025-11-11",65,30,100.0],["Port Chester","2025-11-11",49,27,100.0],["Brooklyn","2025-11-12",38,22,70.83],["Bowery","2025-11-13",33,15,100.0],["Greenwich","2025-11-13",58,43,130.0],["Harlem","2025-11-13",34,26,50.0],["Manhattan West","2025-11-13",52,9,100.0],["Jersey City","2025-11-14",47,33,110.0],["Port Chester","2025-11-14",40,10,50.0],["Columbus Circle","2025-11-15",43,12,50.0],["Greenwich","2025-11-15",26,22,75.0],["Montclair","2025-11-15",80,18,45.83],["Darien","2025-11-16",16,12,50.0],["Tribeca","2025-11-16",70,41,130.0],["Williamsburg","2025-11-16",47,36,110.0],["Harlem","2025-11-17",16,16,93.75],["Upper East Side","2025-11-17",12,12,25.0],["Yonkers","2025-11-17",9,7,25.0],["Bowery","2025-11-18",48,30,100.0],["Fort Greene","2025-11-18",47,16,50.0],["White Plains","2025-11-18",23,15,50.0],["Stamford","2025-11-19",47,16,50.0],["Bowery","2025-11-20",24,13,64.58],["Port Chester","2025-11-20",30,12,50.0],["Upper West Side","2025-11-20",28,12,50.0],["Columbus Circle","2025-11-21",40,16,39.58],["Greenwich","2025-11-22",29,15,50.0],["Tribeca","2025-11-22",48,32,110.0],["Brooklyn","2025-11-23",52,36,110.0],["Jersey City","2025-11-23",52,34,110.0],["Stamford","2025-11-23",40,24,100.0],["Williamsburg","2025-11-23",40,20,56.25],["Williamsburg","2025-11-30",0,55,160.0],["Fort Greene","2025-12-01",44,18,75.0],["Jersey City","2025-12-01",40,40,92.5],["Bowery","2025-12-03",42,18,50.0],["Columbus Circle","2025-12-04",47,14,50.0],["Tribeca","2025-12-05",17,12,70.83],["Greenwich","2025-12-06",30,23,100.0],["Harlem","2025-12-06",49,11,75.0],["Brooklyn","2025-12-07",47,40,117.5],["Fairfield","2025-12-07",49,30,100.0],["Williamsburg","2025-12-07",50,31,72.5],["Bowery","2025-12-08",24,21,75.0],["Fort Greene","2025-12-09",29,25,100.0],["Columbus Circle","2025-12-10",63,15,50.0],["Jersey City","2025-12-10",23,15,50.0],["Harlem","2025-12-11",35,17,50.0],["Fairfield","2025-12-13",24,12,68.75],["Brooklyn","2025-12-14",46,17,66.67],["Greenwich","2025-12-14",9,0,37.5],["Columbus Circle","2025-12-18",40,16,50.0],["Brooklyn","2025-12-20",41,19,75.0],["Greenwich","2025-12-20",26,22,100.0],["Tribeca","2025-12-20",33,22,62.5],["Williamsburg","2025-12-21",105,30,75.0],["Upper East Side","2025-12-28",11,8,50.0],["Upper East Side","2026-01-03",44,28,100.0],["Columbus Circle","2026-01-04",39,25,100.0],["Tribeca","2026-01-04",99,53,160.0],["Williamsburg","2026-01-06",39,19,112.5],["Bowery","2026-01-07",58,30,100.0],["Jersey City","2026-01-08",27,26,68.75],["Bowery","2026-01-15",49,17,50.0],["Williamsburg","2026-01-15",32,17,112.5],["Columbus Circle","2026-01-17",42,30,100.0],["Greenwich","2026-01-17",52,5,56.25],["Tribeca","2026-01-18",37,19,50.0],["Brooklyn","2026-01-20",28,17,62.5],["Bowery","2026-01-21",47,30,100.0],["Jersey City","2026-01-22",39,39,110.0],["Greenwich","2026-01-24",34,13,75.0],["Williamsburg","2026-01-24",69,38,110.0],["Bowery","2026-01-28",43,30,100.0],["Tribeca","2026-01-29",12,12,37.5],["Greenwich","2026-01-31",27,24,81.25],["Williamsburg","2026-01-31",11,11,37.5],["Upper East Side","2026-02-01",11,10,50.0],["Weehawken","2026-02-01",10,10,37.5],["Bowery","2026-02-04",34,27,100.0],["Jersey City","2026-02-05",85,48,130.0],["Tribeca","2026-02-06",59,23,50.0],["Greenwich","2026-02-07",23,6,50.0],["Williamsburg","2026-02-07",77,46,130.0],["Bowery","2026-02-11",40,30,100.0],["Jersey City","2026-02-12",61,36,110.0],["Tribeca","2026-02-13",58,30,100.0],["Greenwich","2026-02-14",49,21,87.5],["Williamsburg","2026-02-14",147,45,130.0],["Chelsea","2026-02-15",50,24,75.0],["Weehawken","2026-02-15",28,28,81.25],["Jersey City","2026-02-18",21,21,50.0],["Tribeca","2026-02-19",27,27,62.5],["Bowery","2026-02-20",20,17,50.0],["Columbus Circle","2026-02-21",44,37,97.5],["Greenwich","2026-02-21",25,13,50.0],["Williamsburg","2026-02-21",82,31,110.0],["Bowery","2026-02-25",28,26,62.5],["Bryant Park","2026-02-26",22,21,100.0],["Jersey City","2026-02-26",41,31,60.0],["Tribeca","2026-02-27",17,17,56.25],["Upper East Side","2026-02-28",40,26,93.75],["Williamsburg","2026-02-28",64,35,110.0],["Weehawken","2026-03-01",24,24,56.25],["Greenwich","2026-03-07",20,18,75.0],["Union Square","2026-03-07",25,12,100.0],["Upper East Side","2026-03-07",21,11,50.0],["Columbus Circle","2026-03-08",55,36,85.0],["Harlem","2026-03-09",16,14,93.75],["Bowery","2026-03-11",28,27,62.5],["Bryant Park","2026-03-12",25,22,100.0],["Jersey City","2026-03-12",21,17,50.0],["Manhattan West","2026-03-13",13,13,37.5],["Greenwich","2026-03-14",21,17,81.25],["Union Square","2026-03-14",29,21,93.75],["Columbus Circle","2026-03-15",27,27,62.5],["Darien","2026-03-21",4,0,37.5],["Upper West Side","2026-03-21",18,15,75.0],["Williamsburg","2026-03-21",72,35,110.0],["Brooklyn","2026-03-22",22,14,50.0],["Manhattan West","2026-03-25",12,12,25.0],["Jersey City","2026-03-26",26,26,50.0],["Bowery","2026-03-27",5,0,25.0],["Harlem","2026-03-27",20,17,93.75],["Upper West Side","2026-03-28",28,22,100.0],["Williamsburg","2026-03-28",21,19,50.0],["Brooklyn","2026-03-29",24,14,50.0],["Columbus Circle","2026-03-29",27,24,62.5],["Bowery","2026-04-01",26,26,50.0],["Jersey City","2026-04-02",57,31,60.0],["Manhattan West","2026-04-03",10,10,37.5],["Union Square","2026-04-04",28,23,87.5],["Williamsburg","2026-04-04",15,15,50.0],["Columbus Circle","2026-04-05",59,31,97.5],["Bryant Park","2026-04-09",11,5,50.0],["Harlem","2026-04-10",9,7,50.0],["Greenwich","2026-04-11",16,14,62.5],["Upper West Side","2026-04-11",29,20,62.5],["Bowery","2026-04-22",33,27,50.0],["Jersey City","2026-04-23",29,20,50.0],["Darien","2026-04-25",16,4,50.0],["Williamsburg","2026-04-25",89,32,110.0],["Brooklyn","2026-05-02",21,19,56.25],["Columbus Circle","2026-05-07",0,0,37.5],["Bowery","2026-05-08",19,12,50.0],["Brooklyn","2026-05-09",22,20,50.0],["Columbus Circle","2026-05-14",0,0,37.5],["Williamsburg","2026-05-17",30,30,100.0],["Montclair","2026-05-18",24,6,50.0],["Bowery","2026-05-20",6,5,50.0],["Montclair","2026-05-24",38,9,75.0],["Williamsburg","2026-05-24",0,32,110.0],["Tribeca","2026-05-25",80,31,66.25],["Paramus","2026-05-28",48,15,100.0],["Montclair","2026-05-30",37,10,100.0],["Brooklyn","2026-05-31",8,0,12.5],["Columbus Circle","2026-05-31",27,27,87.5],["Bowery","2026-06-03",20,13,62.5],["Harlem","2026-06-04",21,15,62.5],["Williamsburg","2026-06-06",40,15,62.5],["Brooklyn","2026-06-07",16,14,62.5],["Jersey City","2026-06-07",23,23,50.0],["Greenwich","2026-06-08",16,9,62.5],["Brooklyn","2026-06-14",33,24,62.5],["Williamsburg","2026-06-14",47,6,50.0],["Bowery","2026-06-17",20,11,50.0],["Harlem","2026-06-18",32,9,50.0],["Paramus","2026-06-18",32,20,100.0],["Columbus Circle","2026-06-20",16,15,62.5],["Montclair","2026-06-20",20,19,100.0],["Williamsburg","2026-06-21",43,15,62.5],["Greenwich","2026-06-22",17,10,62.5],["Paramus","2026-06-27",23,23,100.0],["West Orange","2026-07-06",21,11,62.5],["Jersey City","2026-07-07",41,31,60.0],["Williamsburg","2026-07-08",26,17,50.0],["Harlem","2026-07-09",28,18,50.0],["Montclair","2026-07-10",19,7,100.0],["Brooklyn","2026-07-12",19,13,56.25],["Jersey City","2026-07-13",43,32,60.0],["West Orange","2026-07-13",13,3,62.5],["Greenwich","2026-07-14",10,8,56.25],["Williamsburg","2026-07-15",11,11,25.0],["Harlem","2026-07-16",10,10,25.0],["Paramus","2026-07-16",17,17,100.0],["Jersey City","2026-07-20",52,33,60.0],["Columbus Circle","2026-07-21",32,15,50.0],["Harlem","2026-07-22",32,15,50.0],["East 57th Street","2026-07-23",11,11,50.0],["Paramus","2026-07-23",24,17,62.5],["Williamsburg","2026-07-26",16,16,62.08],["Jersey City","2026-07-27",1,0,18.75],["West Orange","2026-07-27",16,14,62.5],["Greenwich","2026-07-28",9,7,56.25],["Harlem","2026-07-28",22,17,62.5],["East 57th Street","2026-07-29",14,12,50.0],["Columbus Circle","2026-07-30",12,12,50.0],["Montclair","2026-07-31",30,16,62.5],["Brooklyn","2026-08-02",14,9,37.5],["Jersey City","2026-08-03",46,32,60.0],["Clark","2026-08-04",9,7,34.17],["East 57th Street","2026-08-04",11,11,37.5],["Westbury","2026-08-04",5,5,10.42],["Williamsburg","2026-08-05",29,16,50.0],["Columbus Circle","2026-08-06",54,18,350.0],["Montclair","2026-08-06",14,9,62.5],["Brooklyn","2026-08-09",11,9,43.75],["Columbus Circle","2026-08-09",24,24,91.67],["Jersey City","2026-08-10",46,32,60.0],["West Orange","2026-08-10",24,13,62.5],["Millburn Union","2026-08-11",12,10,50.0],["Harlem","2026-08-12",53,34,85.0],["Montclair","2026-08-12",2,10,62.5],["Paramus","2026-08-13",19,19,62.5],["West Orange","2026-08-17",34,16,62.5],["Montclair","2026-08-19",23,18,62.5],["Paramus","2026-08-20",23,17,62.5],["Union Square","2026-08-23",21,15,100.0],["Jersey City","2026-08-26",26,19,62.5],["Fort Greene","2026-08-27",22,11,62.5],["NoMad","2026-08-27",12,10,50.0],["Union Square","2026-08-28",33,22,100.0],["Columbus Circle","2026-08-29",32,0,100.0],["Wayne","2026-08-29",2,0,100.0],["Upper West Side","2026-08-30",0,44,130.0],["Williamsburg","2026-08-30",81,39,110.0],["Bryant Park","2026-09-02",11,9,75.0],["Jersey City","2026-09-02",41,34,85.0],["Bowery","2026-09-03",13,11,57.5],["Fort Greene","2026-09-03",20,10,50.0],["Greenwich","2026-09-03",14,10,56.25],["Williamsburg","2026-09-06",23,20,75.0],["Chelsea","2026-09-08",15,0,50.0],["Huntington Station","2026-09-08",16,8,75.0],["Harlem","2026-09-09",10,9,50.0],["Holbrook","2026-09-09",16,9,75.0],["Jersey City","2026-09-09",20,14,50.0],["Greenwich","2026-09-10",4,3,25.0],["Massapequa","2026-09-13",13,9,104.17],["Westbury","2026-09-15",21,15,56.25],["Tribeca","2026-09-16",34,15,75.0],["Bowery","2026-09-17",14,12,75.0],["Jersey City","2026-09-17",60,27,62.5],["Fort Greene","2026-09-18",14,9,50.0],["Williamsburg","2026-09-19",27,30,87.5],["Chelsea","2026-09-23",16,14,50.0],["Jersey City","2026-09-23",25,18,50.0],["Fort Greene","2026-09-24",16,13,62.5],["Union Square","2026-09-25",12,10,62.5],["Lake Grove","2026-09-26",0,0,25.0],["Williamsburg","2026-09-26",20,18,100.0],["Jericho","2026-09-29",19,15,45.83],["Bryant Park","2026-09-30",11,9,75.0],["Massapequa","2026-09-30",15,12,43.75],["Bowery","2026-10-01",0,23,75.0],["Manhasset","2026-10-03",25,5,83.33]],"promos":[{"start":"2026-01-28","end":"2026-02-10","label":"Feb A"},{"start":"2026-04-08","end":"2026-04-21","label":"Apr B"},{"start":"2026-05-13","end":"2026-05-26","label":"May B"},{"start":"2026-06-24","end":"2026-07-07","label":"Jul A"},{"start":"2026-10-21","end":"2026-11-03","label":"Oct B"},{"start":"2026-11-18","end":"2026-12-01","label":"Nov B"}]}</script>
+
+<script>
+/* ═════════════════════════ Bezi @ Whole Foods dashboard ═════════════════════════
+   All numbers are derived from the JSON block above (#bezi-data), written by
+   build_dashboard.py. Nothing below needs editing for a weekly update.          */
+const SITE_PASSWORD = 'eatbezi2024';
+const GATE_KEY = 'bezi_wfm_dashboard_unlocked';
+
+const D = JSON.parse(document.getElementById('bezi-data').textContent || '{}');
+const WEEKS = D.meta.weeks, W = WEEKS.length, LW = W - 1;
+const BUCKETS = D.meta.buckets;
+const STORE_GROUP = {};
+Object.entries(D.groups).forEach(([g, ss]) => ss.forEach(s => STORE_GROUP[s] = g));
+
+const REGIONS = [
+  {k:'all',  label:'All stores'},
+  {k:'nyc',  label:'NYC',           short:'NYC',   color:'var(--nyc)'},
+  {k:'nj',   label:'New Jersey',    short:'NJ',    color:'var(--nj)'},
+  {k:'nyct', label:'NY State + CT', short:'NY+CT', color:'var(--nyct)'},
+  {k:'li',   label:'Long Island',   short:'LI',    color:'var(--li)'},
+];
+const REGION = Object.fromEntries(REGIONS.map(r => [r.k, r]));
+const FORMATS = [{k:'all',label:'All'},{k:'tub',label:'Tubs'},{k:'dip',label:'Dippers'}];
+const FLAVORS = [{k:'all',label:'All flavors'},{k:'everything',label:'Everything'},{k:'hotHoney',label:'Hot Honey'},{k:'plain',label:'Plain'}];
+const FLAVOR_STYLE = {
+  everything:{label:'Everything', color:'#2563eb'},
+  hotHoney:  {label:'Hot Honey',  color:'#d97706'},
+  plain:     {label:'Plain',      color:'#059669'},
+};
+
+/* ── helpers ── */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const d8 = s => new Date(s + 'T00:00:00');
+const addDays = (s, n) => { const d = d8(s); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); };
+const mondayOf = s => { const d = d8(s); const wd = (d.getDay() + 6) % 7; d.setDate(d.getDate() - wd);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const md = s => { const d = d8(s); return MON[d.getMonth()] + ' ' + d.getDate(); };
+const range = (a, b) => { const x = d8(a), y = d8(b);
+  return x.getMonth() === y.getMonth() ? `${md(a)}–${y.getDate()}` : `${md(a)}–${md(b)}`; };
+const weekRange = ws => range(ws, addDays(ws, 6));
+const money = v => '$' + Math.round(v).toLocaleString('en-US');
+const money2 = v => '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+const num = (v, dp=0) => v.toLocaleString('en-US', {minimumFractionDigits:dp, maximumFractionDigits:dp});
+const pct = v => (v > 0 ? '+' : '') + Math.round(v * 100) + '%';
+
+function bucketsFor(f) {
+  return BUCKETS.filter(b => { const [fm, fl] = b.split('_');
+    return (f.fmt === 'all' || fm === f.fmt) && (f.flav === 'all' || fl === f.flav); });
+}
+function storesFor(f) { return D.stores.filter(s => f.group === 'all' || STORE_GROUP[s] === f.group); }
+
+/* sum of a metric ('units'|'rev') for one store over buckets and week range [a,b] */
+function sumStore(store, buckets, metric, a, b) {
+  const src = D[metric][store]; if (!src) return 0;
+  let t = 0;
+  for (const bk of buckets) { const arr = src[bk]; if (!arr) continue;
+    for (let i = Math.max(0,a); i <= b; i++) t += arr[i]; }
+  return t;
+}
+/* weekly array of a metric across many stores/buckets */
+function weekly(stores, buckets, metric) {
+  const out = new Array(W).fill(0);
+  for (const s of stores) { const src = D[metric][s]; if (!src) continue;
+    for (const bk of buckets) { const arr = src[bk]; if (arr) for (let i = 0; i < W; i++) out[i] += arr[i]; } }
+  return out;
+}
+
+/* demos: [store, date, shelf, sold, cost] → objects with week key */
+const DEMOS = D.demos.map(([store, date, shelf, sold, cost]) => ({store, date, shelf, sold, cost, week: mondayOf(date)}));
+
+/* ── filter bar component ── */
+function filterBar(el, state, opts, onChange) {
+  const render = () => {
+    let h = '';
+    if (opts.geo) h += '<div class="fgroup"><span class="fl">Region</span>' + REGIONS.map(r =>
+      `<button class="pill" data-k="group" data-v="${r.k}" aria-pressed="${state.group===r.k}">${r.color?`<span class="dot" style="background:${r.color}"></span>`:''}${r.label}</button>`).join('') + '</div>';
+    if (opts.sku) {
+      h += '<div class="fsep"></div><div class="fgroup"><span class="fl">SKU type</span>' + FORMATS.map(o =>
+        `<button class="pill" data-k="fmt" data-v="${o.k}" aria-pressed="${state.fmt===o.k}">${o.label}</button>`).join('') + '</div>';
+      h += '<div class="fsep"></div><div class="fgroup"><span class="fl">Flavor</span>' + FLAVORS
+        .filter(o => !(o.k === 'plain' && state.fmt === 'dip'))
+        .map(o => `<button class="pill" data-k="flav" data-v="${o.k}" aria-pressed="${state.flav===o.k}">${o.label}</button>`).join('') + '</div>';
+    }
+    if (opts.extra) h += opts.extra(state);
+    el.innerHTML = h;
+  };
+  el.addEventListener('click', e => {
+    const b = e.target.closest('button[data-k]'); if (!b) return;
+    const k = b.dataset.k, v = b.dataset.v;
+    if (k === 'toggle') state[v] = !state[v]; else state[k] = v;
+    if (state.fmt === 'dip' && state.flav === 'plain') state.flav = 'all';
+    render(); onChange();
+  });
+  el.addEventListener('change', e => {
+    const s = e.target.closest('select[data-k]'); if (!s) return;
+    state[s.dataset.k] = s.value; onChange();
+  });
+  render();
+}
+
+function guard(sectionId, fn) {
+  try { fn(); }
+  catch (err) {
+    console.error(err);
+    const sec = $(sectionId);
+    let box = sec.querySelector('.section-error');
+    if (!box) { box = document.createElement('div'); box.className = 'section-error card'; sec.appendChild(box); }
+    box.textContent = 'This section failed to render: ' + err.message;
+  }
+}
+
+/* ═══════════════ header ═══════════════ */
+function renderHeader() {
+  const all = D.stores, B = BUCKETS;
+  const tracked = weekly(all, B, 'rev').reduce((a,b)=>a+b,0);
+  const trackedU = weekly(all, B, 'units').reduce((a,b)=>a+b,0);
+  const L = D.meta.launch;
+  const lwU = all.reduce((t,s)=>t+sumStore(s,B,'units',LW,LW),0);
+  const lwR = all.reduce((t,s)=>t+sumStore(s,B,'rev',LW,LW),0);
+  const l4U = all.reduce((t,s)=>t+sumStore(s,B,'units',LW-4,LW-1),0)/4;
+  const selling = all.filter(s => sumStore(s,B,'units',LW,LW) > 0).length;
+  const ch = l4U ? (lwU - l4U) / l4U : 0;
+  $('subline').textContent = `Data through ${md(D.meta.data_through)}, ${d8(D.meta.data_through).getFullYear()}  ·  ${all.length} stores  ·  last week ${weekRange(WEEKS[LW])}`;
+  const k = (v, l, s='', cls='') => `<div class="kpi"><div class="v ${cls}">${v}</div><div class="l">${l}</div>${s?`<div class="s">${s}</div>`:''}</div>`;
+  $('kpis').innerHTML =
+    k(money(tracked + L.rev), 'Total revenue', L.rev ? `since launch · ${money(tracked)} since ${md(WEEKS[0])}` : '') +
+    k(num(trackedU + L.units), 'Total units', L.units ? `since launch · ${num(trackedU)} since ${md(WEEKS[0])}` : '') +
+    k(money(lwR), 'Last week revenue', weekRange(WEEKS[LW])) +
+    k(num(lwU), 'Last week units', `L4W avg ${num(l4U,1)}`) +
+    k(pct(ch), 'vs L4W average', 'units', ch >= 0 ? 'up' : 'down') +
+    k(`${selling}/${all.length}`, 'Stores selling', 'last week');
+  $('footer').textContent = `Built ${D.meta.built} from ${D.meta.sales_files} WFM sales exports and ${D.meta.demo_file}. ` +
+    `Store-level data starts ${md(WEEKS[0])}, ${d8(WEEKS[0]).getFullYear()}; launch weeks ${D.meta.launch.from ? range(D.meta.launch.from, D.meta.launch.to) : ''} come from WFM's chain-level file and appear only in the lifetime totals.`;
+}
+
+/* ═══════════════ 01 chart ═══════════════ */
+const chartF = {group:'all', fmt:'all', flav:'all', spend:false};
+let trendChart = null;
+
+const promoPlugin = {
+  id:'promoShading',
+  beforeDatasetsDraw(chart) {
+    const {ctx, chartArea:a, scales:{x}} = chart; if (!a) return;
+    const step = W > 1 ? x.getPixelForValue(1) - x.getPixelForValue(0) : a.width;
+    D.promos.forEach(p => {
+      let s = -1, e = -1;
+      WEEKS.forEach((wk, i) => { if (wk <= p.end && addDays(wk, 6) >= p.start) { if (s < 0) s = i; e = i; } });
+      if (s < 0) return;
+      const x1 = Math.max(a.left, x.getPixelForValue(s) - step/2), x2 = Math.min(a.right, x.getPixelForValue(e) + step/2);
+      ctx.save();
+      ctx.fillStyle = 'rgba(245,176,30,.13)'; ctx.fillRect(x1, a.top, x2 - x1, a.bottom - a.top);
+      ctx.fillStyle = '#9a6207'; ctx.font = '600 10.5px DM Sans, sans-serif'; ctx.textAlign = 'center';
+      const txt = ctx.measureText('Promo ' + p.label).width + 6 < x2 - x1 ? 'Promo ' + p.label : (ctx.measureText(p.label).width + 4 < x2 - x1 ? p.label : '');
+      if (txt) ctx.fillText(txt, (x1 + x2)/2, a.top + 12);
+      ctx.restore();
+    });
+  }
+};
+Chart.register(promoPlugin);
+
+function renderChart() {
+  const stores = storesFor(chartF), bks = bucketsFor(chartF);
+  const flavors = [...new Set(bks.map(b => b.split('_')[1]))];
+  const datasets = [];
+  let totalArr = new Array(W).fill(0);
+  flavors.forEach(fl => {
+    const arr = weekly(stores, bks.filter(b => b.endsWith('_' + fl)), 'units');
+    const first = arr.findIndex(v => v !== 0);
+    if (first < 0) return;
+    arr.forEach((v,i) => totalArr[i] += v);
+    const sparse = fl === 'plain';   // rarely sold: show sales weeks as dots, not a flat zero line
+    datasets.push({label: FLAVOR_STYLE[fl].label, data: arr.map((v,i) => i < first || (sparse && v === 0) ? null : v), spanGaps:false,
+      borderColor: FLAVOR_STYLE[fl].color, backgroundColor: FLAVOR_STYLE[fl].color,
+      borderWidth: 1.8, pointRadius: 2.5, pointHoverRadius: 5, tension: .3, yAxisID: 'y'});
+  });
+  const hasData = datasets.length > 0;
+  if (datasets.length > 1) {
+    const first = totalArr.findIndex(v => v !== 0);
+    datasets.push({label:'Total', data: totalArr.map((v,i) => i < first ? null : v), borderColor:'#1b1b1a',
+      backgroundColor:'#1b1b1a', borderWidth:2.6, pointRadius:2.5, pointHoverRadius:5, tension:.3, yAxisID:'y'});
+  } else if (datasets.length === 1) totalArr = datasets[0].data.map(v => v || 0);
+
+  if (chartF.spend) {
+    const set = new Set(stores), wi = Object.fromEntries(WEEKS.map((w,i)=>[w,i]));
+    const sp = new Array(W).fill(0);
+    DEMOS.forEach(d => { if (set.has(d.store) && d.week in wi) sp[wi[d.week]] += d.cost; });
+    datasets.push({label:'Demo spend ($)', data: sp.map(v => Math.round(v*100)/100), borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.12)',
+      borderDash:[5,4], borderWidth:1.6, pointRadius:2, tension:.25, yAxisID:'y2', fill:true});
+  }
+
+  $('chartEmpty').hidden = hasData;
+  $('trendChart').style.visibility = hasData ? 'visible' : 'hidden';
+  if (!hasData) $('chartEmpty').textContent = 'No sales for this combination yet. Try a different SKU type or flavor.';
+
+  const maxY = Math.max(0, ...totalArr);
+  const opts = {
+    responsive:true, maintainAspectRatio:false, animation:false,
+    interaction:{mode:'index', intersect:false},
+    plugins:{
+      legend:{position:'top', align:'end', labels:{boxWidth:12, boxHeight:3, padding:14, font:{size:12, family:'DM Sans'}}},
+      tooltip:{callbacks:{
+        title: items => 'Week of ' + weekRange(WEEKS[items[0].dataIndex]),
+        label: c => c.parsed.y == null ? null : ' ' + c.dataset.label.replace(' ($)','') + ': ' +
+          (c.dataset.yAxisID === 'y2' ? money2(c.parsed.y) : num(c.parsed.y) + ' units')}}
+    },
+    scales:{
+      x:{grid:{color:'#f0ede7'}, ticks:{font:{size:11, family:'DM Sans'}, maxRotation:0, autoSkipPadding:10}},
+      y:{beginAtZero:true, suggestedMax: Math.max(5, Math.ceil(maxY * 1.1)), grid:{color:'#f0ede7'},
+         title:{display:true, text:'Units sold', font:{size:11.5, family:'DM Sans'}, color:'#6d6a64'},
+         ticks:{precision:0, font:{size:11, family:'DM Sans'}, callback: v => Number.isInteger(v) ? num(v) : ''}},
+      y2:{display:chartF.spend, position:'right', beginAtZero:true, grid:{drawOnChartArea:false},
+         title:{display:chartF.spend, text:'Demo spend', font:{size:11.5, family:'DM Sans'}, color:'#7c3aed'},
+         ticks:{color:'#7c3aed', font:{size:11, family:'DM Sans'}, callback: v => money(v)}}
+    }
+  };
+  if (trendChart) trendChart.destroy();
+  trendChart = new Chart($('trendChart'), {type:'line', data:{labels: WEEKS.map(md), datasets}, options: opts});
+
+  const lw = totalArr[LW] || 0, l4 = (totalArr.slice(LW-4, LW).reduce((a,b)=>a+b,0)) / 4;
+  const best = totalArr.reduce((bi, v, i) => v > totalArr[bi] ? i : bi, 0);
+  $('chartFoot').innerHTML = hasData ?
+    `<span>Last week <b>${num(lw)}</b> units</span><span>L4W avg <b>${num(l4,1)}</b></span>` +
+    `<span>vs L4W <b style="color:${lw>=l4?'var(--up)':'var(--down)'}">${l4 ? pct((lw-l4)/l4) : '—'}</b></span>` +
+    `<span>Best week <b>${num(totalArr[best])}</b> (${md(WEEKS[best])})</span>` +
+    (totalArr.findIndex(v => v) > LW - 8 ? `<span>First sales week <b>${md(WEEKS[totalArr.findIndex(v => v)])}</b></span>` : '') : '';
+}
+
+/* ═══════════════ 02 momentum ═══════════════ */
+const momF = {group:'all', fmt:'all', flav:'all'};
+let mSort = {col:'total_rev', dir:-1};
+const M_COLS = [
+  {k:'store',       label:'Store'},
+  {k:'total_rev',   label:'Total rev',      ds:() => 'since ' + md(WEEKS[0])},
+  {k:'total_units', label:'Total units',    ds:() => 'since ' + md(WEEKS[0])},
+  {k:'lw_rev',      label:'Last week rev',  ds:() => weekRange(WEEKS[LW])},
+  {k:'lw_units',    label:'Last week units',ds:() => weekRange(WEEKS[LW])},
+  {k:'l4w_rev',     label:'L4W avg rev',    ds:() => range(WEEKS[LW-4], addDays(WEEKS[LW-1],6))},
+  {k:'l4w_units',   label:'L4W avg units',  ds:() => range(WEEKS[LW-4], addDays(WEEKS[LW-1],6))},
+  {k:'trend',       label:'Trend',          ds:() => 'LW vs L4W avg'},
+];
+function momRow(s, bks) {
+  const r = {store:s, group:STORE_GROUP[s],
+    total_rev: sumStore(s,bks,'rev',0,LW),   total_units: sumStore(s,bks,'units',0,LW),
+    lw_rev:    sumStore(s,bks,'rev',LW,LW),  lw_units:    sumStore(s,bks,'units',LW,LW),
+    l4w_rev:   sumStore(s,bks,'rev',LW-4,LW-1)/4, l4w_units: sumStore(s,bks,'units',LW-4,LW-1)/4};
+  r.trend = r.l4w_units ? (r.lw_units - r.l4w_units) / r.l4w_units : (r.lw_units > 0 ? Infinity : -Infinity);
+  return r;
+}
+function trendBadge(r) {
+  if (!r.l4w_units && !r.lw_units) return '<span class="badge flat">—</span>';
+  if (!r.l4w_units) return '<span class="badge up">New</span>';
+  const t = r.trend;
+  if (Math.abs(t) < 0.005) return '<span class="badge flat">0%</span>';
+  return `<span class="badge ${t>0?'up':'down'}">${t>0?'▲':'▼'} ${Math.abs(Math.round(t*100))}%</span>`;
+}
+function renderMomentum() {
+  const bks = bucketsFor(momF);
+  const rows = storesFor(momF).map(s => momRow(s, bks));
+  const {col, dir} = mSort;
+  rows.sort((a,b) => col === 'store' ? dir * a.store.localeCompare(b.store) : dir * (a[col] - b[col]) || a.store.localeCompare(b.store));
+  $('mHead').innerHTML = '<tr>' + M_COLS.map(c =>
+    `<th class="sortable ${col===c.k?'on':''}" data-col="${c.k}" tabindex="0">${c.label}<span class="arr">${col===c.k?(dir<0?'↓':'↑'):'↕'}</span>${c.ds?`<span class="ds">${c.ds()}</span>`:''}</th>`).join('') + '</tr>';
+  const T = rows.reduce((t,r) => { ['total_rev','total_units','lw_rev','lw_units','l4w_rev','l4w_units'].forEach(k => t[k]+=r[k]); return t; },
+    {store:'', total_rev:0,total_units:0,lw_rev:0,lw_units:0,l4w_rev:0,l4w_units:0});
+  T.trend = T.l4w_units ? (T.lw_units - T.l4w_units) / T.l4w_units : 0;
+  const showTag = momF.group === 'all';
+  let h = `<tr class="total"><td>${esc(REGION[momF.group].label)} · ${rows.length} stores</td><td>${money(T.total_rev)}</td><td>${num(T.total_units)}</td>` +
+    `<td>${money(T.lw_rev)}</td><td>${num(T.lw_units)}</td><td>${money(T.l4w_rev)}</td><td>${num(T.l4w_units,1)}</td><td>${trendBadge(T)}</td></tr>`;
+  rows.forEach((r,i) => {
+    h += `<tr><td><span class="rank">${i+1}</span>${esc(r.store)}${showTag?`<span class="tag ${r.group}">${REGION[r.group].short}</span>`:''}</td>` +
+      `<td>${money(r.total_rev)}</td><td>${num(r.total_units)}</td><td>${money(r.lw_rev)}</td><td>${num(r.lw_units)}</td>` +
+      `<td>${money(r.l4w_rev)}</td><td>${num(r.l4w_units,1)}</td><td>${trendBadge(r)}</td></tr>`;
+  });
+  $('mBody').innerHTML = h;
+}
+function onMomSort(e) {
+  const th = e.target.closest('th[data-col]'); if (!th) return;
+  if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+  e.preventDefault();
+  const c = th.dataset.col;
+  mSort = mSort.col === c ? {col:c, dir:-mSort.dir} : {col:c, dir: c === 'store' ? 1 : -1};
+  guard('sec-momentum', renderMomentum);
+}
+
+/* ═══════════════ 03 demo tracker ═══════════════ */
+const demoF = {group:'all'};
+const DEMO_WEEKS = [...new Set(DEMOS.map(d => d.week))].sort();
+function demoColor(shelf, sold) { const v = shelf > 0 ? shelf : sold; return v <= 10 ? 'c-red' : v <= 18 ? 'c-yellow' : 'c-green'; }
+function renderDemo() {
+  const allowed = new Set(storesFor(demoF));
+  const list = DEMOS.filter(d => allowed.has(d.store));
+  const map = {};
+  list.forEach(d => (map[d.store + '|' + d.week] ||= []).push(d));
+  const stores = [...new Set(list.map(d => d.store))].sort();
+  const spend = list.reduce((t,d)=>t+d.cost,0), sold = list.reduce((t,d)=>t+d.sold,0);
+  $('demoSummary').innerHTML = `<span><b>${list.length}</b>demos</span><span><b>${stores.length}</b>stores</span>` +
+    `<span><b>${money(spend)}</b>spend</span><span><b>${num(sold)}</b>units sold</span>` +
+    `<span><b>${sold ? money2(spend/sold) : '—'}</b>per unit sold</span>`;
+  $('dHead').innerHTML = '<tr><th>Store</th>' + DEMO_WEEKS.map(w => `<th>${md(w)}<span class="ds">${d8(w).getFullYear()}</span></th>`).join('') + '</tr>';
+  let h = '';
+  if (!stores.length) h = `<tr><td colspan="${DEMO_WEEKS.length+1}" style="padding:18px">No demos logged for this region yet.</td></tr>`;
+  stores.forEach(s => {
+    h += `<tr><td>${esc(s)}</td>`;
+    DEMO_WEEKS.forEach(w => {
+      const ds = map[s + '|' + w];
+      if (!ds) { h += '<td><div class="cell c-none">·</div></td>'; return; }
+      const sh = Math.min(...ds.map(d => d.shelf > 0 ? d.shelf : Infinity)), shelf = isFinite(sh) ? sh : 0;
+      const sd = ds.reduce((t,d)=>t+d.sold,0), c = ds.reduce((t,d)=>t+d.cost,0);
+      const tip = ds.map(d => `${md(d.date)}: ${d.shelf} on shelf, ${d.sold} sold, ${money2(d.cost)}`).join('\n');
+      h += `<td><div class="cell ${demoColor(shelf, sd)}" title="${esc(tip)}"><span class="a">${shelf} / ${sd}${ds.length>1?` <span style="font-weight:500;font-size:10px">×${ds.length}</span>`:''}</span>` +
+           `<span class="b">${money(c)} · ${sd ? money2(c/sd) : '—'}</span></div></td>`;
+    });
+    h += '</tr>';
+  });
+  if (stores.length) {
+    h += '<tr class="total"><td>Week total</td>' + DEMO_WEEKS.map(w => {
+      const ds = list.filter(d => d.week === w);
+      if (!ds.length) return '<td><div class="cell tot"><span class="b">—</span></div></td>';
+      const c = ds.reduce((t,d)=>t+d.cost,0), sd = ds.reduce((t,d)=>t+d.sold,0);
+      return `<td><div class="cell tot"><span class="a">${money(c)}</span><span class="b">${num(sd)} sold · ${sd?money2(c/sd):'—'}</span></div></td>`;
+    }).join('') + '</tr>';
+  }
+  $('dBody').innerHTML = h;
+  $('demoScroll').scrollLeft = $('demoScroll').scrollWidth;
+}
+
+/* ═══════════════ 04 L4W velocity ═══════════════ */
+const velF = {group:'all', fmt:'all', flav:'all', sort:'velocity'};
+const V_START = 3;   // first week with 4 weeks of history (week 4)
+function demoDays(store, i) {
+  const a = WEEKS[i-3], b = addDays(WEEKS[i], 6);
+  return new Set(DEMOS.filter(d => d.store === store && d.date >= a && d.date <= b).map(d => d.date)).size;
+}
+function velCell(avg, prev, days, isTotal) {
+  let cls = '', b = '';
+  if (prev != null) {
+    const dlt = avg - prev, p = prev ? dlt / prev : null;
+    b = `${dlt >= 0 ? '+' : '−'}${num(Math.abs(dlt),1)} · ${p == null ? (avg>0?'new':'—') : pct(p)}`;
+    if (!isTotal) { if (p != null && p >= .1) cls = 'c-up c-uptint'; else if (p != null && p <= -.1) cls = 'c-down c-downtint'; }
+  }
+  return `<td><div class="cell ${isTotal?'tot':cls}"><span class="a">${num(avg,1)}${days?`<span class="dd">${days}d</span>`:''}</span>${b?`<span class="b">${b}</span>`:''}</div></td>`;
+}
+function renderVelocity() {
+  const bks = bucketsFor(velF), stores = storesFor(velF);
+  const idx = []; for (let i = V_START; i <= LW; i++) idx.push(i);
+  const series = stores.map(s => {
+    const u = weekly([s], bks, 'units');
+    const avg = WEEKS.map((_, i) => i < V_START ? null : (u[i]+u[i-1]+u[i-2]+u[i-3]) / 4);
+    return {s, avg};
+  });
+  if (velF.sort === 'velocity') series.sort((a,b) => b.avg[LW] - a.avg[LW] || a.s.localeCompare(b.s));
+  else series.sort((a,b) => a.s.localeCompare(b.s));
+  $('vHead').innerHTML = '<tr><th>Store</th>' + idx.map(i => `<th title="${range(WEEKS[i-3], addDays(WEEKS[i],6))}">${md(WEEKS[i])}<span class="ds">4 wks to ${md(addDays(WEEKS[i],6))}</span></th>`).join('') + '</tr>';
+  let h = '';
+  series.forEach(({s, avg}) => {
+    h += `<tr><td>${esc(s)}</td>` + idx.map(i => velCell(avg[i], i > V_START ? avg[i-1] : null, demoDays(s, i), false)).join('') + '</tr>';
+  });
+  const tot = WEEKS.map((_, i) => i < V_START ? null : series.reduce((t, r) => t + r.avg[i], 0));
+  const totDays = i => { const set = new Set(stores), a = WEEKS[i-3], b = addDays(WEEKS[i],6);
+    return new Set(DEMOS.filter(d => set.has(d.store) && d.date >= a && d.date <= b).map(d => d.store + d.date)).size; };
+  h += '<tr class="total"><td>Week total</td>' + idx.map(i => velCell(tot[i], i > V_START ? tot[i-1] : null, totDays(i), true)).join('') + '</tr>';
+  $('vBody').innerHTML = h;
+  $('velScroll').scrollLeft = $('velScroll').scrollWidth;
+}
+
+/* ═══════════════ init + gate ═══════════════ */
+let started = false;
+function init() {
+  if (started) return; started = true;
+  document.body.classList.remove('locked');
+  $('gate').remove();
+  guard('sec-chart', renderHeader);
+  filterBar($('chartFilters'), chartF, {geo:true, sku:true,
+    extra: s => `<div class="fsep"></div><div class="fgroup"><button class="pill spend" data-k="toggle" data-v="spend" aria-pressed="${s.spend}">Demo spend</button></div>`},
+    () => guard('sec-chart', renderChart));
+  filterBar($('momentumFilters'), momF, {geo:true, sku:true}, () => guard('sec-momentum', renderMomentum));
+  filterBar($('demoFilters'), demoF, {geo:true}, () => guard('sec-demo', renderDemo));
+  filterBar($('velFilters'), velF, {geo:true, sku:true,
+    extra: s => `<div class="fsep"></div><div class="fgroup"><span class="fl">Sort</span><select class="select" data-k="sort" aria-label="Sort stores">` +
+      `<option value="velocity" ${s.sort==='velocity'?'selected':''}>Latest velocity</option><option value="store" ${s.sort==='store'?'selected':''}>Store A–Z</option></select></div>`},
+    () => guard('sec-velocity', renderVelocity));
+  $('mHead').addEventListener('click', onMomSort);
+  $('mHead').addEventListener('keydown', onMomSort);
+  guard('sec-chart', renderChart);
+  guard('sec-momentum', renderMomentum);
+  guard('sec-demo', renderDemo);
+  guard('sec-velocity', renderVelocity);
+}
+function tryUnlock(e) {
+  e.preventDefault();
+  if ($('pw').value === SITE_PASSWORD) {
+    try { localStorage.setItem(GATE_KEY, '1'); } catch (_) {}
+    init();
+  } else { $('pwErr').textContent = 'That password is not right. Try again.'; $('pw').select(); }
+  return false;
+}
+(function () {
+  let ok = false; try { ok = !!localStorage.getItem(GATE_KEY); } catch (_) {}
+  if (ok) init();
+})();
+</script>
+</body>
+</html>
